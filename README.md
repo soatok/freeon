@@ -4,6 +4,8 @@
 
 FREON implements FROST ([RFC 9591](https://www.rfc-editor.org/rfc/rfc9591.html)) to allow geographically distributed teams produce digital signatures.
 
+Each share of the signing key is encrypted locally using [age](https://github.com/FiloSottile/age).
+
 > [!WARNING]
 > This software is a minimum viable product (MVP) and is only in the **alpha** stage of development. It has not been audited. Do not use this in production yet!
 
