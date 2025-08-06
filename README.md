@@ -53,13 +53,13 @@ To initiate a new DKG group, one of the clients with access to the coordinator w
 the number of participants and threshold needed to perform a signature operation, respectively):
 
 ```terminal
-freon keygen -h hostname:port -n 7 -t 3
+freon keygen create -h hostname:port -n 7 -t 3
 ```
 
 Upon success, a Group ID will be returned. This is to be shared with the other participants, who will pass it as an extra argument:
 
 ```terminal
-freon keygen -h hostname:port -g [group-id-goes-here]
+freon keygen join -h hostname:port -g [group-id-goes-here]
 ```
 
 This will maintain a connection with the coordinator until all `n` participants have connected. Afterwards, a copy of the public key will be returned to each client.
@@ -80,8 +80,8 @@ To initiate a key ceremony, the following information is needed:
 The message can be passed as a file name or via `STDIN`, like so:
 
 ```terminal
-freon sign -g [group-id-goes-here] file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign -g [group-id-goes-here]
+freon sign create -g [group-id-goes-here] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freon sign create -g [group-id-goes-here]
 ```
 
 This will initialize a signature in progress and return a Ceremony ID.
@@ -96,8 +96,8 @@ By default, the final signature will be returned as a 128-character hex-encoded 
 You can pass an optional `--openssh` flag to return an OpenSSH-compatible signature.
 
 ```terminal
-freon sign --openssh -g [group-id-goes-here] file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon --openssh sign -g [group-id-goes-here]
+freon sign create --openssh -g [group-id-goes-here] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freon sign create --openssh -g [group-id-goes-here]
 ```
 
 ##### Terminating Incomplete Ceremonies
@@ -116,8 +116,12 @@ freon terminate [ceremony-id-goes-here]
 Each client will need to run this command to participate in the ceremony.
 
 ```terminal
-freon sign -c [ceremony-id] file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign -c [ceremony-id]
+freon sign join -c [ceremony-id] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freon sign join -c [ceremony-id]
+
+# Identical:
+freon sign join --ceremony [ceremony-id] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freon sign join --ceremony [ceremony-id]
 ```
 
 ##### Optional Arguments
@@ -125,10 +129,10 @@ echo -n "MESSAGE TO BE SIGNED" | freon sign -c [ceremony-id]
 You can furthermore pass the `-i` or `--identity` flag to specify the file path for your age secret keys.
 
 ```terminal
-freon sign -c [ceremony-id] -i /path/to/age.keys file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign -i /path/to/age.keys -c [ceremony-id]
+freon sign join -c [ceremony-id] -i /path/to/age.keys file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freon sign join -i /path/to/age.keys -c [ceremony-id]
 
 # Identical
-freon sign --ceremony [ceremony-id] --identical /path/to/age.keys file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign --identity /path/to/age.keys --ceremony [ceremony-id]
+freon sign join --ceremony [ceremony-id] --identity /path/to/age.keys file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freon sign join --identity /path/to/age.keys --ceremony [ceremony-id]
 ```
