@@ -84,7 +84,7 @@ echo -n "MESSAGE TO BE SIGNED" | freon sign -g [group-id-goes-here]
 
 This will initialize a signature in progress and return a Ceremony ID.
 
-> [!NOTICE]
+> [!NOTE]
 > You do not need a key share to initiate a signature proposal. This is an intentional design feature to allow
 > CI/CD pipelines queue up a Signature Ceremony that clients can then opt into participating in.
 
