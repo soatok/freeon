@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -200,8 +201,62 @@ func pollKeygen(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func sendKeygen(w http.ResponseWriter, r *http.Request) {
+type KeyGenMessageRequest struct {
+	GroupID   string
+	Message   string
+	MyPartyID uint16
+	LastSeen  int64
+}
+type KeyGenMessageResponse struct {
+	LatestMessageID int64
+	Messages        []string
+}
 
+func sendKeygen(w http.ResponseWriter, r *http.Request) {
+	var req KeyGenMessageRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	msg, err := hex.DecodeString(req.Message)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	inbox, err := internal.GetKeygenMessagesSince(db, req.GroupID, req.LastSeen)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	// Get a new maximum
+	var max = req.LastSeen
+	var messages []string
+	for _, m := range inbox {
+		if m.DbId >= max {
+			max = m.DbId
+		}
+		messages = append(messages, hex.EncodeToString(m.Message))
+	}
+
+	record, err := internal.AddKeyGenMessage(db, req.GroupID, req.MyPartyID, msg)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// If no other inserts occured, we can do this
+	if record.DbId-max == 1 {
+		max = record.DbId
+	}
+
+	// Let's queue up the messages
+	response := KeyGenMessageResponse{
+		LatestMessageID: max,
+		Messages:        messages,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func createSign(w http.ResponseWriter, r *http.Request) {

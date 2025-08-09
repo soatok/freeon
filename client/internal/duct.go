@@ -175,9 +175,10 @@ func DuctPollSignCeremony(host string, req PollSignRequest) (PollSignResponse, e
 }
 
 type KeyGenMessageRequest struct {
-	GroupID  string
-	Message  string
-	LastSeen int64
+	GroupID   string
+	Message   string
+	MyPartyID uint16
+	LastSeen  int64
 }
 type KeyGenMessageResponse struct {
 	LatestMessageID int64

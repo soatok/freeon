@@ -73,3 +73,27 @@ func AddParticipant(db *sql.DB, groupUid string) (FreonParticipant, error) {
 	p.DbId = id
 	return p, nil
 }
+
+// Add a keygen message to the queue
+func AddKeyGenMessage(db *sql.DB, groupUid string, myPartyID uint16, message []byte) (FreonKeygenMessage, error) {
+	group, err := GetGroupData(db, groupUid)
+	if err != nil {
+		return FreonKeygenMessage{}, err
+	}
+	participant, err := GetParticipantID(db, groupUid, myPartyID)
+	if err != nil {
+		return FreonKeygenMessage{}, err
+	}
+	msg := FreonKeygenMessage{
+		DbId:    int64(0),
+		GroupID: group.DbId,
+		Sender:  participant,
+		Message: message,
+	}
+	id, err := InsertKeygenMessage(db, msg)
+	if err != nil {
+		return FreonKeygenMessage{}, err
+	}
+	msg.DbId = id
+	return msg, nil
+}

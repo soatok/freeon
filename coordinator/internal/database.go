@@ -146,6 +146,26 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 	return participants, nil
 }
 
+func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, error) {
+	stmt, err := db.Prepare(`
+		SELECT p.id 
+		FROM participants p 
+		JOIN keygroups g ON p.groupid = g.id 
+		WHERE g.uid = ? AND p.partyid = ?
+		`)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var id int64
+	err = stmt.QueryRow(groupUid).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
 func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	stmt, err := db.Prepare(`SELECT
 		id, groupid, active, signature FROM ceremonies 

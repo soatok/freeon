@@ -111,7 +111,7 @@ var timeout time.Duration = time.Hour
 var lastMessageIdSeen int64
 var messagesIn chan *messages.Message
 
-func ProcessKeygenMessages(msgsIn chan *messages.Message, s *state.State, host, groupID string) {
+func ProcessKeygenMessages(msgsIn chan *messages.Message, s *state.State, host, groupID string, myPartyID uint16) {
 	for {
 		select {
 		case msg := <-msgsIn:
@@ -132,9 +132,10 @@ func ProcessKeygenMessages(msgsIn chan *messages.Message, s *state.State, host, 
 					continue
 				}
 				request := KeyGenMessageRequest{
-					GroupID:  groupID,
-					Message:  hex.EncodeToString(msgBytes),
-					LastSeen: lastMessageIdSeen,
+					GroupID:   groupID,
+					Message:   hex.EncodeToString(msgBytes),
+					MyPartyID: myPartyID,
+					LastSeen:  lastMessageIdSeen,
 				}
 				response, err := DuctKeygenProtocolMessage(host, request)
 				if err != nil {
@@ -287,7 +288,7 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 
 	// Use a goroutine for processing messages (which can append more messages)
 	lastMessageIdSeen = 0
-	go ProcessKeygenMessages(messagesIn, state, host, groupID)
+	go ProcessKeygenMessages(messagesIn, state, host, groupID, myPartyID)
 
 	err = state.WaitForError()
 	if err != nil {
@@ -342,32 +343,34 @@ func ListKeyGen() {
 }
 
 func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte, autoConfirm bool) {
-	// First, poll the server to get metadata
-	pollRequest := PollSignRequest{
-		CeremonyID: ceremonyID,
-		PartyID:    nil,
-	}
-	pollResponse, err := DuctPollSignCeremony(host, pollRequest)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
-	}
-	groupID := pollResponse.GroupID
-	threshold := pollResponse.Threshold
-
-	// Now let's begin polling the server until enough parties join
-	for {
-		time.Sleep(time.Second)
-		pollResponse, err = DuctPollSignCeremony(host, pollRequest)
+	/*
+		// First, poll the server to get metadata
+		pollRequest := PollSignRequest{
+			CeremonyID: ceremonyID,
+			PartyID:    nil,
+		}
+		pollResponse, err := DuctPollSignCeremony(host, pollRequest)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s", err.Error())
 			os.Exit(1)
 		}
-		others := uint16(len(pollResponse.OtherParties))
-		if others+1 >= threshold {
+		// groupID := pollResponse.GroupID
+		threshold := pollResponse.Threshold
 
+		// Now let's begin polling the server until enough parties join
+		for {
+			time.Sleep(time.Second)
+			pollResponse, err = DuctPollSignCeremony(host, pollRequest)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err.Error())
+				os.Exit(1)
+			}
+			others := uint16(len(pollResponse.OtherParties))
+			if others+1 >= threshold {
+
+			}
 		}
-	}
+	*/
 }
 
 func ListSign(groupID string) {
