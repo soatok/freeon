@@ -89,18 +89,6 @@ EXAMPLES:
 
 `
 
-const keygenListUsage = `FREON KEYGEN LIST - List key shares
-
-USAGE:
-    freon keygen list [OPTIONS]
-
-DESCRIPTION:
-    Display local key shares and associated group information.
-
-OPTIONS:
-        --help    Print help information
-`
-
 const signUsage = `FREON SIGN - Signature Generation
 
 USAGE:
@@ -164,19 +152,6 @@ EXAMPLES:
     echo "Hello World" | freon sign join -c cer_def456 -
     freon sign join -c cer_def456 -i ~/.age/keys.txt message.txt
     freon sign join -c cer_def456 --auto-confirm message.txt
-
-`
-
-const signListUsage = `FREON SIGN LIST - List signature ceremonies
-
-USAGE:
-    freon sign list [OPTIONS]
-
-DESCRIPTION:
-    Display active signature ceremonies and their status.
-
-OPTIONS:
-        --help    Print help information
 
 `
 

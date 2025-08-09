@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -24,6 +25,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	// This is where commands are processed.
+	// Note that the first verb after `freon` is case insensitive.
 	command := strings.ToLower(args[0])
 	subArgs := args[1:]
 	switch command {
@@ -97,9 +100,35 @@ func main() {
 	}
 }
 
+// Handle file inputs for shell scripting arguments.
+//
+// If filename is non-empty, read that file.
+// If filename is empty, attempt to read STDIN.
+func readInput(filename string) ([]byte, error) {
+	if filename != "" {
+		// Read from file
+		return os.ReadFile(filename)
+	}
+
+	// No filename: check if STDIN has data
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		// STDIN is a terminal, no data
+		return nil, fmt.Errorf("no input provided")
+	}
+
+	// Read from STDIN
+	return io.ReadAll(os.Stdin)
+}
+
 // Handle "freon keygen create [...]"
 func FreonKeygenCreate(args []string) {
 	fs := flag.NewFlagSet("keygen create", flag.ExitOnError)
+	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", keygenCreateUsage) }
 	host := fs.String("h", "", "Coordinator hostname:port")
 	hostLong := fs.String("host", "", "Coordinator hostname:port")
 	participants := fs.Int("n", 0, "Number of participants")
@@ -226,33 +255,65 @@ func FreonSignCreate(args []string) {
 
 	// Get message file from remaining args
 	remainingArgs := fs.Args()
-	var messageFile string
+	var messageFile string = ""
 	if len(remainingArgs) > 0 {
 		messageFile = remainingArgs[0]
-	} else {
-		fmt.Fprintf(os.Stderr, "Error: message file is required\n")
+	}
+	message, err := readInput(messageFile)
+	if err != nil {
+		fmt.Printf("A message file is required")
 		fs.Usage()
 		os.Exit(1)
 	}
-
-	// TODO: Implementation
-	fmt.Printf("Creating signature ceremony for group %s, message file: %s\n", *groupID, messageFile)
-	if *host != "" {
-		fmt.Printf("Using host: %s\n", *host)
-	}
-	if *openssh {
-		fmt.Println("Will return OpenSSH-compatible signature")
-	}
+	internal.InitSignCeremony(*groupID, *host, message, *openssh)
 }
 
 func FreonSignJoin(args []string) {
-	// TODO
+	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
+	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signJoinUsage) }
+	ceremonyID := fs.String("c", "", "Ceremony ID")
+	ceremonyIDLong := fs.String("ceremony", "", "Ceremony ID")
+	host := fs.String("h", "", "Coordinator hostname:port")
+	hostLong := fs.String("host", "", "Coordinator hostname:port")
+	identity := fs.String("i", "", "Path to age secret keys file")
+	identityLong := fs.String("identity", "", "Path to age secret keys file")
+	autoConfirm := fs.Bool("auto-confirm", false, "Skip message confirmation prompt")
+	fs.Parse(args)
+
+	if *ceremonyIDLong != "" {
+		*ceremonyID = *ceremonyIDLong
+	}
+	if *hostLong != "" {
+		*host = *hostLong
+	}
+	if *identityLong != "" {
+		*identity = *identityLong
+	}
+	remainingArgs := fs.Args()
+	var messageFile string = ""
+	if len(remainingArgs) > 0 {
+		messageFile = remainingArgs[0]
+	}
+	message, err := readInput(messageFile)
+	if err != nil {
+		fmt.Printf("A message file is required")
+		fs.Usage()
+		os.Exit(1)
+	}
+	internal.JoinSignCeremony(*ceremonyID, *host, *identity, message, *autoConfirm)
 }
 
 func FreonSignList(args []string) {
-	// TODO
+	internal.ListSign()
 }
 
 func FreonTerminate(args []string) {
-	// TODO
+	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
+	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", terminateUsage) }
+	ceremonyID := fs.String("c", "", "Ceremony ID")
+	ceremonyIDLong := fs.String("ceremony", "", "Ceremony ID")
+	if *ceremonyIDLong != "" {
+		*ceremonyID = *ceremonyIDLong
+	}
+	internal.TerminateSignCeremony(*ceremonyID)
 }
