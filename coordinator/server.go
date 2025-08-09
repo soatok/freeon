@@ -68,14 +68,45 @@ func main() {
 	http.ListenAndServe(serverConfig.Hostname, sessionManager.LoadAndSave(mux))
 }
 
+func sendError(w http.ResponseWriter, e error) {
+	response := ResponseMainPage{Message: e.Error()}
+	w.WriteHeader(http.StatusInternalServerError)
+	h := w.Header()
+	h.Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func indexPage(w http.ResponseWriter, r *http.Request) {
 	response := ResponseMainPage{Message: "Freon Coordinator v0.0.0"}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
-func createKeygen(w http.ResponseWriter, r *http.Request) {
+type InitKeyGenRequest struct {
+	Participants uint16 `json:"n"`
+	Threshold    uint16 `json:"t"`
+}
+type InitKeyGenResponse struct {
+	GroupID string `json:"group-id"`
+}
 
+// Initialize a key generation ceremony
+func createKeygen(w http.ResponseWriter, r *http.Request) {
+	var req InitKeyGenRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	uid, err := internal.NewKeyGroup(db, req.Participants, req.Threshold)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	response := InitKeyGenResponse{
+		GroupID: uid,
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 func joinKeygen(w http.ResponseWriter, r *http.Request) {

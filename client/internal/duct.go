@@ -109,6 +109,7 @@ func DuctJoinKeyGenCeremony(host string, req JoinKeyGenRequest) (JoinKeyGenRespo
 	return response, nil
 }
 
+// Poll a keygen ceremony until enough participants have joined
 func DuctPollKeyGenCeremony(host string, req PollKeyGenRequest) (PollKeyGenResponse, error) {
 	err := InitializeHttpClient()
 	if err != nil {
@@ -126,6 +127,49 @@ func DuctPollKeyGenCeremony(host string, req PollKeyGenRequest) (PollKeyGenRespo
 	defer resp.Body.Close()
 
 	var response PollKeyGenResponse
+	json.NewDecoder(resp.Body).Decode(&response)
+	return response, nil
+}
+
+// We're kicking off a signing ceremony
+func DuctInitSignCeremony(host string, req InitSignRequest) (InitSignResponse, error) {
+	err := InitializeHttpClient()
+	if err != nil {
+		return InitSignResponse{}, err
+	}
+	uri, err := GetApiEndpoint(host, "InitKeyGenCeremony")
+	if err != nil {
+		return InitSignResponse{}, err
+	}
+	body, _ := json.Marshal(req)
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return InitSignResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var response InitSignResponse
+	json.NewDecoder(resp.Body).Decode(&response)
+	return response, nil
+}
+
+func DuctPollSignCeremony(host string, req PollSignRequest) (PollSignResponse, error) {
+	err := InitializeHttpClient()
+	if err != nil {
+		return PollSignResponse{}, err
+	}
+	uri, err := GetApiEndpoint(host, "PollSignCeremony")
+	if err != nil {
+		return PollSignResponse{}, err
+	}
+	body, _ := json.Marshal(req)
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return PollSignResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var response PollSignResponse
 	json.NewDecoder(resp.Body).Decode(&response)
 	return response, nil
 }

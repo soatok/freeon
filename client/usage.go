@@ -117,13 +117,12 @@ ARGUMENTS:
 OPTIONS:
     -g, --group <GROUP_ID>    Group ID from DKG ceremony
     -h, --host <HOST>         Coordinator hostname:port
-        --openssh             Return OpenSSH-compatible signature format
         --help                Print help information
 
 EXAMPLES:
     freon sign create -g grp_abc123 message.txt
     echo "Hello World" | freon sign create -g grp_abc123 -
-    freon sign create --openssh -g grp_abc123 release.tar.gz
+    freon sign create -g grp_abc123 release.tar.gz
 
 `
 

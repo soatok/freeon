@@ -146,6 +146,80 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 	return participants, nil
 }
 
+func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
+	stmt, err := db.Prepare(`SELECT
+		id, groupid, active, signature FROM ceremonies 
+		WHERE uid = ?`)
+	if err != nil {
+		return FreonCeremonies{}, err
+	}
+	defer stmt.Close()
+
+	var id int64
+	var groupid int64
+	var active bool
+	var signature *string
+	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature)
+	if err != nil {
+		return FreonCeremonies{}, err
+	}
+	return FreonCeremonies{
+		DbId:      id,
+		GroupID:   groupid,
+		Uid:       ceremonyID,
+		Active:    active,
+		Signature: signature,
+	}, nil
+}
+
+func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
+	stmt, err := db.Prepare(`
+		SELECT
+			x.id,
+			x.ceremonyid,
+			x.participantid,
+			x.state,
+			p.partyid
+		FROM players x 
+		JOIN participants p ON x.participantid = p.id
+		JOIN ceremonies c ON x.ceremonyid = c.id
+		WHERE c.uid = ?`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(ceremonyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var players []FreonPlayers
+	for rows.Next() {
+		var dbId int64
+		var ceremonyId int64
+		var participantId int64
+		var stateHex string
+		var partyId uint16
+		if err := rows.Scan(&dbId, &ceremonyId, &participantId, &stateHex, &partyId); err != nil {
+			return nil, err
+		}
+		state, err := hex.DecodeString(stateHex)
+		if err != nil {
+			return nil, err
+		}
+		p := FreonPlayers{
+			DbId:          dbId,
+			CeremonyID:    ceremonyId,
+			ParticipantID: participantId,
+			State:         state,
+			PartyID:       partyId,
+		}
+		players = append(players, p)
+	}
+	return players, nil
+}
+
 func GetKeygenMessagesSince(db *sql.DB, groupUid string, lastSeen int64) ([]FreonKeygenMessage, error) {
 	stmt, err := db.Prepare(`
 		SELECT
@@ -261,6 +335,23 @@ func InsertParticipant(db *sql.DB, p FreonParticipant) (int64, error) {
 	}
 	stateHex := hex.EncodeToString(p.State)
 	res, err := stmt.Exec(p.GroupID, p.Uid, p.PartyID, stateHex)
+	if err != nil {
+		return 0, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func InsertPlayer(db *sql.DB, p FreonPlayers) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO players (ceremonyid, participantid, state) VALUES (?, ?, ?)`)
+	if err != nil {
+		return 0, err
+	}
+	stateHex := hex.EncodeToString(p.State)
+	res, err := stmt.Exec(p.CeremonyID, p.ParticipantID, stateHex)
 	if err != nil {
 		return 0, err
 	}

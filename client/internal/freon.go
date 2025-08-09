@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -13,8 +14,8 @@ import (
 )
 
 type InitKeyGenRequest struct {
-	Participants int `json:"n"`
-	Threshold    int `json:"t"`
+	Participants uint16 `json:"n"`
+	Threshold    uint16 `json:"t"`
 }
 type InitKeyGenResponse struct {
 	GroupID string `json:"group-id"`
@@ -23,8 +24,8 @@ type InitKeyGenResponse struct {
 // Initialize a keygen ceremony with the coordinator
 func InitKeyGenCeremony(host string, participants int, threshold int) {
 	req := InitKeyGenRequest{
-		Participants: participants,
-		Threshold:    threshold,
+		Participants: uint16(participants),
+		Threshold:    uint16(threshold),
 	}
 	res, err := DuctInitKeyGenCeremony(host, req)
 	if err != nil {
@@ -47,13 +48,42 @@ type PollKeyGenResponse struct {
 	PartySize    uint16   `json:"n"`
 }
 
+func HashMessageForSanity(data []byte) string {
+	hash := sha512.Sum384(data)
+	return hex.EncodeToString(hash[:])
+}
+
+type InitSignRequest struct {
+	GroupID     string `json:"group-id"`
+	MessageHash string `json:"hash"`
+}
+type InitSignResponse struct {
+	CeremonyID string `json:"ceremony-id"`
+}
+
+// Kicking off a key-signing ceremony
+func InitSignCeremony(host, groupID string, message []byte) {
+	req := InitSignRequest{
+		GroupID:     groupID,
+		MessageHash: HashMessageForSanity(message),
+	}
+	res, err := DuctInitSignCeremony(host, req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	fmt.Printf("Key signing ceremony created!\n%s\n", res.CeremonyID)
+	os.Exit(0)
+}
+
 type PollSignRequest struct {
-	GroupID string `json:"group-id"`
-	PartyID uint16 `json:"party-id"`
+	CeremonyID string  `json:"ceremony-id"`
+	PartyID    *uint16 `json:"party-id"`
 }
 type PollSignResponse struct {
 	GroupID      string   `json:"group-id"`
 	MyPartyID    uint16   `json:"party-id"`
+	Threshold    uint16   `json:"t"`
 	OtherParties []uint16 `json:"parties"`
 }
 
@@ -300,12 +330,33 @@ func ListKeyGen() {
 	}
 }
 
-func InitSignCeremony(groupID, host string, message []byte, openssh bool) {
-
-}
-
 func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte, autoConfirm bool) {
+	// First, poll the server to get metadata
+	pollRequest := PollSignRequest{
+		CeremonyID: ceremonyID,
+		PartyID:    nil,
+	}
+	pollResponse, err := DuctPollSignCeremony(host, pollRequest)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	groupID := pollResponse.GroupID
+	threshold := pollResponse.Threshold
 
+	// Now let's begin polling the server until enough parties join
+	for {
+		time.Sleep(time.Second)
+		pollResponse, err = DuctPollSignCeremony(host, pollRequest)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s", err.Error())
+			os.Exit(1)
+		}
+		others := uint16(len(pollResponse.OtherParties))
+		if others+1 >= threshold {
+
+		}
+	}
 }
 
 func ListSign(groupID string) {

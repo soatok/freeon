@@ -177,7 +177,7 @@ func FreonKeygenCreate(args []string) {
 	}
 
 	// Now that we have a configuration, let's initialize the ceremony
-	internal.InitKeyGenCeremony(*host, *participants, *threshold)
+	internal.InitKeyGenCeremony(*host, uint16(*participants), uint16(*threshold))
 }
 
 func FreonKeygenJoin(args []string) {
@@ -233,7 +233,7 @@ func FreonSignCreate(args []string) {
 	groupIDLong := fs.String("group", "", "Group ID from DKG ceremony")
 	host := fs.String("h", "", "Coordinator hostname:port")
 	hostLong := fs.String("host", "", "Coordinator hostname:port")
-	openssh := fs.Bool("openssh", false, "Return OpenSSH-compatible signature format")
+	// openssh := fs.Bool("openssh", false, "Return OpenSSH-compatible signature format")
 	fs.Parse(args)
 
 	// Merge short/long flags
@@ -263,7 +263,7 @@ func FreonSignCreate(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
-	internal.InitSignCeremony(*groupID, *host, message, *openssh)
+	internal.InitSignCeremony(*groupID, *host, message)
 }
 
 func FreonSignJoin(args []string) {

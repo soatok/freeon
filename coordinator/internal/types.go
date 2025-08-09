@@ -35,6 +35,7 @@ type FreonPlayers struct {
 	DbId          int64
 	CeremonyID    int64
 	ParticipantID int64
+	PartyID       uint16
 	State         []byte
 }
 

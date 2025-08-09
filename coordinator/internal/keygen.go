@@ -6,7 +6,7 @@ import (
 )
 
 // Create a new DKG group
-func NewKeyGroup(db *sql.DB, n, t int) (string, error) {
+func NewKeyGroup(db *sql.DB, n, t uint16) (string, error) {
 	// Unique ID (192 bits entropy)
 	uid, err := UniqueID()
 	if err != nil {
