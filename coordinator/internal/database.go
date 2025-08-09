@@ -27,6 +27,7 @@ func DbEnsureTablesExist(db *sql.DB) error {
 		groupid INTEGER REFERENCES keygroups(id),
 		uid TEXT NOT NULL
 		active BOOLEAN DEFAULT TRUE
+		hash TEXT
 		signature TEXT NULL
 	);
 	CREATE TABLE IF NOT EXISTS players (
@@ -168,7 +169,7 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 
 func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	stmt, err := db.Prepare(`SELECT
-		id, groupid, active, signature FROM ceremonies 
+		id, groupid, active, hash, signature FROM ceremonies 
 		WHERE uid = ?`)
 	if err != nil {
 		return FreonCeremonies{}, err
@@ -178,6 +179,7 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	var id int64
 	var groupid int64
 	var active bool
+	var hash string
 	var signature *string
 	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature)
 	if err != nil {
@@ -188,6 +190,7 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 		GroupID:   groupid,
 		Uid:       ceremonyID,
 		Active:    active,
+		Hash:      hash,
 		Signature: signature,
 	}, nil
 }
@@ -338,6 +341,22 @@ func InsertGroup(db *sql.DB, g FreonGroup) (int64, error) {
 		return 0, err
 	}
 	res, err := stmt.Exec(g.Uid, g.Participants, g.Threshold)
+	if err != nil {
+		return 0, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func InsertCeremony(db *sql.DB, c FreonCeremonies) (int64, error) {
+	stmt, err := db.Prepare(`INSERT INTO ceremonies (groupid, uid, active, hash) VALUES (?, ?, ?, ?)`)
+	if err != nil {
+		return 0, err
+	}
+	res, err := stmt.Exec(c.GroupID, c.Uid, c.Active, c.Hash)
 	if err != nil {
 		return 0, err
 	}

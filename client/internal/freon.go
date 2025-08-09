@@ -7,9 +7,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/taurusgroup/frost-ed25519/pkg/eddsa"
 	"github.com/taurusgroup/frost-ed25519/pkg/frost"
 	"github.com/taurusgroup/frost-ed25519/pkg/frost/party"
 	"github.com/taurusgroup/frost-ed25519/pkg/messages"
+	"github.com/taurusgroup/frost-ed25519/pkg/ristretto"
 	"github.com/taurusgroup/frost-ed25519/pkg/state"
 )
 
@@ -171,7 +173,7 @@ func ProcessKeygenMessages(msgsIn chan *messages.Message, s *state.State, host, 
 	}
 }
 
-func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ceremonyID string) {
+func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ceremonyID string, myPartyID uint16) {
 	for {
 		select {
 		case msg := <-msgsIn:
@@ -228,6 +230,22 @@ func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ce
 			return
 		}
 	}
+}
+
+func uint16ToHexBE(n uint16) string {
+	bytes := []byte{byte(n >> 8), byte(n)}
+	return hex.EncodeToString(bytes)
+}
+
+func hexBEToUint16(s string) (uint16, error) {
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		return 0, err
+	}
+	if len(bytes) != 2 {
+		return 0, fmt.Errorf("expected 2 bytes, got %d", len(bytes))
+	}
+	return (uint16(bytes[0]) << 8) | uint16(bytes[1]), nil
 }
 
 // Join a keygen ceremony
@@ -288,7 +306,7 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 
 	// Use a goroutine for processing messages (which can append more messages)
 	lastMessageIdSeen = 0
-	go ProcessKeygenMessages(messagesIn, state, host, groupID, myPartyID)
+	go ProcessKeygenMessages(messagesIn, state, host, groupID, joinResponse.MyPartyID)
 
 	err = state.WaitForError()
 	if err != nil {
@@ -314,7 +332,16 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
 		os.Exit(1)
 	}
-	err = config.AddShare(host, groupID, groupKey, secretShare)
+	// Let's build the list of public shares
+	publicShares := make(map[string]string)
+	for index, sh := range public.Shares {
+		i := uint16ToHexBE(uint16(index))
+		shh := hex.EncodeToString(sh.BytesEd25519())
+		publicShares[i] = shh
+	}
+
+	// Okay, finally, we add the share data to the local config
+	err = config.AddShare(host, groupID, groupKey, secretShare, publicShares)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
 		os.Exit(1)
@@ -343,40 +370,133 @@ func ListKeyGen() {
 }
 
 func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte, autoConfirm bool) {
-	/*
-		// First, poll the server to get metadata
-		pollRequest := PollSignRequest{
-			CeremonyID: ceremonyID,
-			PartyID:    nil,
-		}
-		pollResponse, err := DuctPollSignCeremony(host, pollRequest)
+	// First, poll the server to get metadata
+	pollRequest := PollSignRequest{
+		CeremonyID: ceremonyID,
+		PartyID:    nil,
+	}
+	pollResponse, err := DuctPollSignCeremony(host, pollRequest)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	myPartyID := party.ID(pollResponse.MyPartyID)
+	groupID := pollResponse.GroupID
+	threshold := pollResponse.Threshold
+
+	// Now let's begin polling the server until enough parties join
+	for {
+		time.Sleep(time.Second)
+		pollResponse, err = DuctPollSignCeremony(host, pollRequest)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s", err.Error())
 			os.Exit(1)
 		}
-		// groupID := pollResponse.GroupID
-		threshold := pollResponse.Threshold
-
-		// Now let's begin polling the server until enough parties join
-		for {
-			time.Sleep(time.Second)
-			pollResponse, err = DuctPollSignCeremony(host, pollRequest)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s", err.Error())
-				os.Exit(1)
-			}
-			others := uint16(len(pollResponse.OtherParties))
-			if others+1 >= threshold {
-
-			}
+		others := uint16(len(pollResponse.OtherParties))
+		if others+1 >= threshold {
+			break
 		}
-	*/
+	}
+
+	config, err := LoadUserConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	var encryptedShare string = ""
+	var publicSharesHex map[string]string
+	var publicKeyHex string
+	for _, s := range config.Shares {
+		if s.GroupID == groupID {
+			encryptedShare = s.EncryptedShare
+			publicSharesHex = s.PublicShares
+			publicKeyHex = s.PublicKey
+		}
+	}
+	if encryptedShare == "" {
+		fmt.Fprintf(os.Stderr, "could not find encrypted share for group %s", groupID)
+		os.Exit(1)
+	}
+	rawPk, err := hex.DecodeString(publicKeyHex)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not find encrypted share for group %s", groupID)
+		os.Exit(1)
+	}
+
+	// Let's deserialize the public shares
+	publicShares := make(map[party.ID]*ristretto.Element, len(publicSharesHex))
+	for k, v := range publicSharesHex {
+		p16, err := hexBEToUint16(k)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s", err.Error())
+			os.Exit(1)
+		}
+		rawEl, err := hex.DecodeString(v)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s", err.Error())
+			os.Exit(1)
+		}
+		pid := party.ID(p16)
+		var el *ristretto.Element
+		el.SetCanonicalBytes(rawEl)
+		publicShares[pid] = el
+	}
+
+	// Let's decrypt with age
+	secretBytes, err := DecryptShareFor(encryptedShare, identityFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	var secret eddsa.SecretShare
+	err = secret.UnmarshalBinary(secretBytes)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+
+	// Great, let's process the party members now that we're full
+	partyMembers := []party.ID{myPartyID}
+	for _, p := range pollResponse.OtherParties {
+		partyMembers = append(partyMembers, party.ID(p))
+	}
+	set := party.NewIDSlice(partyMembers)
+
+	var pkEl *ristretto.Element
+	pkEl.SetCanonicalBytes(rawPk)
+	pk := eddsa.NewPublicKeyFromPoint(pkEl)
+
+	publicData := eddsa.Public{
+		PartyIDs:  set,
+		Threshold: party.Size(threshold),
+		Shares:    publicShares,
+		GroupKey:  pk,
+	}
+
+	state, signOutput, err := frost.NewSignState(set, &secret, &publicData, message, timeout)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+
+	// Use a goroutine for processing messages (which can append more messages)
+	lastMessageIdSeen = 0
+	go ProcessSignMessages(messagesIn, state, host, groupID, uint16(myPartyID))
+
+	err = state.WaitForError()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+
+	groupSig := hex.EncodeToString(signOutput.Signature.ToEd25519())
+	fmt.Printf("Signature:\n%s\n", groupSig)
 }
 
 func ListSign(groupID string) {
-
+	// TODO - soatok
 }
 
 func TerminateSignCeremony(ceremonyID string) {
-
+	// TODO - soatok
 }

@@ -113,6 +113,7 @@ func createKeygen(w http.ResponseWriter, r *http.Request) {
 	response := InitKeyGenResponse{
 		GroupID: uid,
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -259,8 +260,32 @@ func sendKeygen(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func createSign(w http.ResponseWriter, r *http.Request) {
+type InitSignRequest struct {
+	GroupID     string `json:"group-id"`
+	MessageHash string `json:"hash"`
+}
+type InitSignResponse struct {
+	CeremonyID string `json:"ceremony-id"`
+}
 
+func createSign(w http.ResponseWriter, r *http.Request) {
+	var req InitSignRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	uid, err := internal.NewSignGroup(db, req.GroupID, req.MessageHash)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	response := InitSignResponse{
+		CeremonyID: uid,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func joinSign(w http.ResponseWriter, r *http.Request) {

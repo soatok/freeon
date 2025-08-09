@@ -8,10 +8,11 @@ import (
 
 // Shares from keygen ceremonies are stored (encrypted)
 type Shares struct {
-	Host           string `json:"host"`
-	GroupID        string `json:"group-id"`
-	PublicKey      string `json:"public-key"`
-	EncryptedShare string `json:"encrypted-share"`
+	Host           string            `json:"host"`
+	GroupID        string            `json:"group-id"`
+	PublicKey      string            `json:"public-key"`
+	EncryptedShare string            `json:"encrypted-share"`
+	PublicShares   map[string]string `json:"public-shares"`
 }
 
 // This may expand in future versions
@@ -80,12 +81,13 @@ func (cfg FreonConfig) Save() error {
 	return encoder.Encode(cfg)
 }
 
-func (cfg FreonConfig) AddShare(host, groupID, publicKey, share string) error {
+func (cfg FreonConfig) AddShare(host, groupID, publicKey, share string, otherShares map[string]string) error {
 	s := Shares{
 		Host:           host,
 		GroupID:        groupID,
 		PublicKey:      publicKey,
 		EncryptedShare: share,
+		PublicShares:   otherShares,
 	}
 	cfg.Shares = append(cfg.Shares, s)
 	return cfg.Save()

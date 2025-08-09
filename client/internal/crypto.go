@@ -3,8 +3,10 @@ package internal
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"filippo.io/age"
 )
@@ -47,4 +49,39 @@ func DecryptShare(encryptedShareHex string, identity age.Identity) ([]byte, erro
 	}
 
 	return decryptedData, nil
+}
+
+func ParseAgeIdentityFile(filePath string) ([]age.Identity, error) {
+	// Open the identity file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open identity file %s: %w", filePath, err)
+	}
+	defer file.Close()
+
+	// Parse identities from the file
+	identities, err := age.ParseIdentities(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse identities from %s: %w", filePath, err)
+	}
+
+	if len(identities) == 0 {
+		return nil, fmt.Errorf("no valid identities found in %s", filePath)
+	}
+
+	return identities, nil
+}
+
+func DecryptShareFor(encryptedShareHex, filePath string) ([]byte, error) {
+	idents, err := ParseAgeIdentityFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range idents {
+		decrypted, err := DecryptShare(encryptedShareHex, id)
+		if err != nil {
+			return decrypted, nil
+		}
+	}
+	return nil, errors.New("could not decrypt share")
 }

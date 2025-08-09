@@ -28,6 +28,7 @@ type FreonCeremonies struct {
 	GroupID   int64
 	Uid       string
 	Active    bool
+	Hash      string
 	Signature *string
 }
 
