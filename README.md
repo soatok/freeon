@@ -14,7 +14,7 @@ Each share of the signing key is encrypted locally using [age](https://github.co
 ### Freon Clients
 
 ```terminal
-# TODO - Soatok
+go install github.com/soatok/freon/client@latest
 ```
 
 ### Freon Coordinators
@@ -27,7 +27,10 @@ Each share of the signing key is encrypted locally using [age](https://github.co
 > Internet, but this was cut from the alpha release due to time constraints.
 
 ```terminal
-# TODO - Soatok
+git clone https://github.com/soatok/freon.git
+cd freon
+CGO_ENABLED=1 go build -o coordinator ./coordinator
+./coordinator
 ```
 
 ## Usage
