@@ -42,7 +42,7 @@ type PollKeyGenRequest struct {
 }
 type PollKeyGenResponse struct {
 	GroupID      string   `json:"group-id"`
-	MyPartyID    uint16   `json:"party-id"`
+	MyPartyID    *uint16  `json:"party-id"`
 	OtherParties []uint16 `json:"parties"`
 	Threshold    uint16   `json:"t"`
 	PartySize    uint16   `json:"n"`
@@ -91,7 +91,8 @@ type JoinKeyGenRequest struct {
 	GroupID string `json:"group-id"`
 }
 type JoinKeyGenResponse struct {
-	Status bool `json:"status"`
+	Status    bool   `json:"status"`
+	MyPartyID uint16 `json:"my-party-id"`
 }
 
 type SendKeyGenRequest struct {
@@ -230,7 +231,7 @@ func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ce
 
 // Join a keygen ceremony
 func JoinKeyGenCeremony(host, groupID, recipient string) {
-	// First, poll the server to get our party ID
+	// First, poll the server to make sure it exists
 	pollRequest := PollKeyGenRequest{
 		GroupID: groupID,
 		PartyID: nil,
@@ -241,11 +242,21 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 		os.Exit(1)
 	}
 
+	// Next, we need to formally join the party and get your ID
+	joinRequest := JoinKeyGenRequest{
+		GroupID: groupID,
+	}
+	joinResponse, err := DuctJoinKeyGenCeremony(host, joinRequest)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+
 	// Load the properties from this threshold
-	myPartyID := party.ID(pollResponse.MyPartyID)
+	myPartyID := party.ID(joinResponse.MyPartyID)
 	// partySize := party.Size(pollResponse.PartySize)
 	threshold := party.Size(pollResponse.Threshold)
-	pollRequest.PartyID = &pollResponse.MyPartyID
+	pollRequest.PartyID = &joinResponse.MyPartyID
 
 	// Now let's begin polling the server until enough parties join
 	for {
