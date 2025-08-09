@@ -1,0 +1,75 @@
+package internal
+
+import (
+	"database/sql"
+	"errors"
+)
+
+// Create a new DKG group
+func NewKeyGroup(db *sql.DB, n, t int) (string, error) {
+	// Unique ID (192 bits entropy)
+	uid, err := UniqueID()
+	if err != nil {
+		return "", err
+	}
+	uid = "g_" + uid
+
+	stmt, err := db.Prepare("INSERT INTO keygroups (uid, n, t) VALUES (?, ?, ?)")
+	if err != nil {
+		return "", err
+	}
+	_, err = stmt.Exec(uid, n, t)
+	if err != nil {
+		return "", err
+	}
+
+	return uid, nil
+}
+
+// Create a blank slate participant ID
+func AddParticipant(db *sql.DB, groupUid string) (FreonParticipant, error) {
+	groupData, err := GetGroupData(db, groupUid)
+	if err != nil {
+		return FreonParticipant{}, err
+	}
+	participants, err := GetGroupParticipants(db, groupUid)
+	if err != nil {
+		return FreonParticipant{}, err
+	}
+	if len(participants) >= int(groupData.Participants) {
+		return FreonParticipant{}, errors.New("cannot add participant: group is full")
+	}
+
+	// Figure out the maximum party ID for existing participants
+	var max uint16 = 0
+	for _, p := range participants {
+		if p.PartyID > max {
+			max = p.PartyID
+		}
+	}
+	if max == 0xFFFF {
+		return FreonParticipant{}, errors.New("cannot add participant: party ID would overflow")
+	}
+	nextMaxId := max + 1
+
+	// Get a unique participant ID
+	uid, err := UniqueID()
+	if err != nil {
+		return FreonParticipant{}, err
+	}
+	uid = "p_" + uid
+
+	p := FreonParticipant{
+		DbId:    int64(0),
+		GroupID: groupData.DbId,
+		Uid:     uid,
+		PartyID: nextMaxId,
+		State:   []byte{},
+	}
+	id, err := InsertParticipant(db, p)
+	if err != nil {
+		return FreonParticipant{}, err
+	}
+	p.DbId = id
+	return p, nil
+}

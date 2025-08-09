@@ -64,8 +64,6 @@ func main() {
 			FreonSignCreate(subArgs[1:])
 		case "join":
 			FreonSignJoin(subArgs[1:])
-		case "list":
-			FreonSignList(subArgs[1:])
 		default:
 			fmt.Fprintf(os.Stderr, "Error: unknown sign subcommand: %s\n\n", subcommand)
 			fmt.Fprintf(os.Stderr, "%s\n", signUsage)
@@ -303,15 +301,12 @@ func FreonSignJoin(args []string) {
 	internal.JoinSignCeremony(*ceremonyID, *host, *identity, message, *autoConfirm)
 }
 
-func FreonSignList(args []string) {
-	internal.ListSign()
-}
-
 func FreonTerminate(args []string) {
 	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", terminateUsage) }
 	ceremonyID := fs.String("c", "", "Ceremony ID")
 	ceremonyIDLong := fs.String("ceremony", "", "Ceremony ID")
+	fs.Parse(args)
 	if *ceremonyIDLong != "" {
 		*ceremonyID = *ceremonyIDLong
 	}

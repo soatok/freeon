@@ -1,6 +1,5 @@
 module github.com/soatok/freon
 
-go 1.24.5
+go 1.24
 
-require filippo.io/age v1.2.1
-replace github.com/taurusgroup/frost-ed25519 => github.com/soatok/frost-ed25519 v0.0.0-20250805224500-ae78c7826e4b
+replace github.com/taurusgroup/frost-ed25519 => github.com/soatok/frost-ed25519 v0.0.0-20250805104728-ae78c7826e4b

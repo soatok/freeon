@@ -97,7 +97,6 @@ USAGE:
 SUBCOMMANDS:
     create    Initialize a new signature ceremony
     join      Join an existing signature ceremony
-    list      List active signature ceremonies
     help      Print this message or the help of the given subcommand(s)
 
 `
