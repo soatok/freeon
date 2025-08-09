@@ -137,7 +137,7 @@ func DuctInitSignCeremony(host string, req InitSignRequest) (InitSignResponse, e
 	if err != nil {
 		return InitSignResponse{}, err
 	}
-	uri, err := GetApiEndpoint(host, "InitKeyGenCeremony")
+	uri, err := GetApiEndpoint(host, "InitSignCeremony")
 	if err != nil {
 		return InitSignResponse{}, err
 	}
@@ -149,6 +149,28 @@ func DuctInitSignCeremony(host string, req InitSignRequest) (InitSignResponse, e
 	defer resp.Body.Close()
 
 	var response InitSignResponse
+	json.NewDecoder(resp.Body).Decode(&response)
+	return response, nil
+}
+
+func DuctJoinSignCeremony(host string, req JoinSignRequest) (JoinSignResponse, error) {
+	err := InitializeHttpClient()
+	if err != nil {
+		return JoinSignResponse{}, err
+	}
+	uri, err := GetApiEndpoint(host, "JoinSignCeremony")
+	if err != nil {
+		return JoinSignResponse{}, err
+	}
+	body, _ := json.Marshal(req)
+
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return JoinSignResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var response JoinSignResponse
 	json.NewDecoder(resp.Body).Decode(&response)
 	return response, nil
 }
@@ -209,6 +231,7 @@ func DuctKeygenProtocolMessage(host string, req KeyGenMessageRequest) (KeyGenMes
 
 type SignMessageRequest struct {
 	CeremonyID string
+	MyPartyID  uint16
 	Message    string
 	LastSeen   int64
 }

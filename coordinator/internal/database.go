@@ -97,6 +97,29 @@ func GetGroupData(db *sql.DB, groupUid string) (FreonGroup, error) {
 		PublicKey:    publicKey,
 	}, nil
 }
+func GetGroupByID(db *sql.DB, groupID int64) (FreonGroup, error) {
+	stmt, err := db.Prepare("SELECT id, uid, threshold, participants, publicKey FROM keygroups WHERE id = ?")
+	if err != nil {
+		return FreonGroup{}, err
+	}
+	defer stmt.Close()
+
+	var uid string
+	var threshold uint16
+	var participants uint16
+	var publicKey *string
+	err = stmt.QueryRow(groupID).Scan(&uid, &threshold, &participants, &publicKey)
+	if err != nil {
+		return FreonGroup{}, err
+	}
+	return FreonGroup{
+		DbId:         groupID,
+		Uid:          uid,
+		Participants: participants,
+		Threshold:    threshold,
+		PublicKey:    publicKey,
+	}, nil
+}
 
 // Get all of the participants for a group
 func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, error) {

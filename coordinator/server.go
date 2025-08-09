@@ -288,18 +288,116 @@ func createSign(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func joinSign(w http.ResponseWriter, r *http.Request) {
+type JoinSignRequest struct {
+	CeremonyID  string `json:"ceremony-id"`
+	MessageHash string `json:"hash"`
+	MyPartyID   uint16 `json:"party-id"`
+}
+type JoinSignResponse struct {
+	Status bool `json:"status"`
+}
 
+func joinSign(w http.ResponseWriter, r *http.Request) {
+	var req JoinSignRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	_, err = internal.JoinSignCeremony(db, req.CeremonyID, req.MessageHash, req.MyPartyID)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	response := JoinSignResponse{
+		Status: true,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+type PollSignRequest struct {
+	CeremonyID string  `json:"ceremony-id"`
+	PartyID    *uint16 `json:"party-id"`
 }
 
 func pollSign(w http.ResponseWriter, r *http.Request) {
+	var req PollSignRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	response, err := internal.PollSignCeremony(db, req.CeremonyID, *req.PartyID)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
 
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+}
+
+type SignMessageRequest struct {
+	CeremonyID string
+	MyPartyID  uint16
+	Message    string
+	LastSeen   int64
+}
+type SignMessageResponse struct {
+	LatestMessageID int64
+	Messages        []string
 }
 
 func sendSign(w http.ResponseWriter, r *http.Request) {
+	var req SignMessageRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	msg, err := hex.DecodeString(req.Message)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	inbox, err := internal.GetSignMessagesSince(db, req.CeremonyID, req.LastSeen)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	// Get a new maximum
+	var max = req.LastSeen
+	var messages []string
+	for _, m := range inbox {
+		if m.DbId >= max {
+			max = m.DbId
+		}
+		messages = append(messages, hex.EncodeToString(m.Message))
+	}
 
+	record, err := internal.AddSignMessage(db, req.CeremonyID, req.MyPartyID, msg)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// If no other inserts occured, we can do this
+	if record.DbId-max == 1 {
+		max = record.DbId
+	}
+
+	// Let's queue up the messages
+	response := KeyGenMessageResponse{
+		LatestMessageID: max,
+		Messages:        messages,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func terminateSign(w http.ResponseWriter, r *http.Request) {
-
+	// TODO - soatok
 }

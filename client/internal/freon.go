@@ -24,10 +24,10 @@ type InitKeyGenResponse struct {
 }
 
 // Initialize a keygen ceremony with the coordinator
-func InitKeyGenCeremony(host string, participants int, threshold int) {
+func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
 	req := InitKeyGenRequest{
-		Participants: uint16(participants),
-		Threshold:    uint16(threshold),
+		Participants: participants,
+		Threshold:    threshold,
 	}
 	res, err := DuctInitKeyGenCeremony(host, req)
 	if err != nil {
@@ -95,6 +95,15 @@ type JoinKeyGenRequest struct {
 type JoinKeyGenResponse struct {
 	Status    bool   `json:"status"`
 	MyPartyID uint16 `json:"my-party-id"`
+}
+
+type JoinSignRequest struct {
+	CeremonyID  string `json:"ceremony-id"`
+	MessageHash string `json:"hash"`
+	MyPartyID   uint16 `json:"party-id"`
+}
+type JoinSignResponse struct {
+	Status bool `json:"status"`
 }
 
 type SendKeyGenRequest struct {
@@ -195,6 +204,7 @@ func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ce
 				}
 				request := SignMessageRequest{
 					CeremonyID: ceremonyID,
+					MyPartyID:  myPartyID,
 					Message:    hex.EncodeToString(msgBytes),
 					LastSeen:   lastMessageIdSeen,
 				}
@@ -279,7 +289,6 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 
 	// Now let's begin polling the server until enough parties join
 	for {
-		time.Sleep(time.Second)
 		pollResponse, err = DuctPollKeyGenCeremony(host, pollRequest)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s", err.Error())
@@ -290,6 +299,7 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 			// We can stop polling
 			break
 		}
+		time.Sleep(time.Second)
 	}
 
 	// Great, let's process the party members now that we're full
@@ -369,7 +379,8 @@ func ListKeyGen() {
 	}
 }
 
-func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte, autoConfirm bool) {
+func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
+	//, autoConfirm bool
 	// First, poll the server to get metadata
 	pollRequest := PollSignRequest{
 		CeremonyID: ceremonyID,
@@ -384,9 +395,29 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte, aut
 	groupID := pollResponse.GroupID
 	threshold := pollResponse.Threshold
 
+	// Next, we need to actually join the signing quorum
+
+	// Next, we need to formally join the party and get your ID
+	hash := HashMessageForSanity(message)
+	joinRequest := JoinSignRequest{
+		CeremonyID:  ceremonyID,
+		MessageHash: hash,
+		MyPartyID:   pollResponse.MyPartyID,
+	}
+
+	// Enlist ourselves before we begin polling
+	res, err := DuctJoinSignCeremony(host, joinRequest)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	if !res.Status {
+		fmt.Fprintf(os.Stderr, "An unexpected error has occurred.\n")
+		os.Exit(1)
+	}
+
 	// Now let's begin polling the server until enough parties join
 	for {
-		time.Sleep(time.Second)
 		pollResponse, err = DuctPollSignCeremony(host, pollRequest)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s", err.Error())
@@ -396,6 +427,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte, aut
 		if others+1 >= threshold {
 			break
 		}
+		time.Sleep(time.Second)
 	}
 
 	config, err := LoadUserConfig()

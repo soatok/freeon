@@ -142,14 +142,12 @@ OPTIONS:
     -c, --ceremony <CEREMONY_ID>    Ceremony ID from sign create
     -h, --host <HOST>               Coordinator hostname:port
     -i, --identity <FILE>           Path to age secret keys file
-        --auto-confirm              Skip message confirmation prompt
         --help                      Print help information
 
 EXAMPLES:
     freon sign join -c cer_def456 message.txt
     echo "Hello World" | freon sign join -c cer_def456 -
     freon sign join -c cer_def456 -i ~/.age/keys.txt message.txt
-    freon sign join -c cer_def456 --auto-confirm message.txt
 
 `
 
