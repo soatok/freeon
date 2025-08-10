@@ -275,7 +275,7 @@ func FreonSignJoin(args []string) {
 	hostLong := fs.String("host", "", "Coordinator hostname:port")
 	identity := fs.String("i", "", "Path to age secret keys file")
 	identityLong := fs.String("identity", "", "Path to age secret keys file")
-	autoConfirm := fs.Bool("auto-confirm", false, "Skip message confirmation prompt")
+	// autoConfirm := fs.Bool("auto-confirm", false, "Skip message confirmation prompt")
 	fs.Parse(args)
 
 	if *ceremonyIDLong != "" {
@@ -298,7 +298,8 @@ func FreonSignJoin(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
-	internal.JoinSignCeremony(*ceremonyID, *host, *identity, message, *autoConfirm)
+	internal.JoinSignCeremony(*ceremonyID, *host, *identity, message)
+	// , *autoConfirm)
 }
 
 func FreonTerminate(args []string) {
