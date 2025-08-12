@@ -15,13 +15,16 @@ import (
 	"github.com/taurusgroup/frost-ed25519/pkg/state"
 )
 
-type InitKeyGenRequest struct {
-	Participants uint16 `json:"n"`
-	Threshold    uint16 `json:"t"`
-}
-type InitKeyGenResponse struct {
-	GroupID string `json:"group-id"`
-}
+// The default timeout for the FROST protocol.
+// 1 hour is eventually to allow complex key ceremonies involving airgapped machines.
+var timeout time.Duration = time.Hour
+
+// The ID of the last message seen. Sent with HTTP requests to fetch more messages.
+var lastMessageIdSeen int64
+
+// Used for goroutines that process FROST protocol messages
+// See ProcessKeygenMessages() and ProcessSignMessages() below.
+var messagesIn chan *messages.Message
 
 // Initialize a keygen ceremony with the coordinator
 func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
@@ -38,29 +41,9 @@ func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
 	os.Exit(0)
 }
 
-type PollKeyGenRequest struct {
-	GroupID string  `json:"group-id"`
-	PartyID *uint16 `json:"party-id,omitempty"`
-}
-type PollKeyGenResponse struct {
-	GroupID      string   `json:"group-id"`
-	MyPartyID    *uint16  `json:"party-id"`
-	OtherParties []uint16 `json:"parties"`
-	Threshold    uint16   `json:"t"`
-	PartySize    uint16   `json:"n"`
-}
-
 func HashMessageForSanity(data []byte) string {
 	hash := sha512.Sum384(data)
 	return hex.EncodeToString(hash[:])
-}
-
-type InitSignRequest struct {
-	GroupID     string `json:"group-id"`
-	MessageHash string `json:"hash"`
-}
-type InitSignResponse struct {
-	CeremonyID string `json:"ceremony-id"`
 }
 
 // Kicking off a key-signing ceremony
@@ -78,50 +61,7 @@ func InitSignCeremony(host, groupID string, message []byte) {
 	os.Exit(0)
 }
 
-type PollSignRequest struct {
-	CeremonyID string  `json:"ceremony-id"`
-	PartyID    *uint16 `json:"party-id"`
-}
-type PollSignResponse struct {
-	GroupID      string   `json:"group-id"`
-	MyPartyID    uint16   `json:"party-id"`
-	Threshold    uint16   `json:"t"`
-	OtherParties []uint16 `json:"parties"`
-}
-
-type JoinKeyGenRequest struct {
-	GroupID string `json:"group-id"`
-}
-type JoinKeyGenResponse struct {
-	Status    bool   `json:"status"`
-	MyPartyID uint16 `json:"my-party-id"`
-}
-
-type JoinSignRequest struct {
-	CeremonyID  string `json:"ceremony-id"`
-	MessageHash string `json:"hash"`
-	MyPartyID   uint16 `json:"party-id"`
-}
-type JoinSignResponse struct {
-	Status bool `json:"status"`
-}
-
-type SendKeyGenRequest struct {
-	GroupID    string `json:"group-id"`
-	MyPartyID  uint16 `json:"party-id"`
-	LastIDSeen int64  `json:"last-seen-id"`
-	Message    string `json:"message"`
-}
-type SendKeyGenResponse struct {
-	Status   bool     `json:"status"`
-	Messages []string `json:"messages"`
-}
-
-var timeout time.Duration = time.Hour
-
-var lastMessageIdSeen int64
-var messagesIn chan *messages.Message
-
+// Goroutine for processing the Keygen protocol messages
 func ProcessKeygenMessages(msgsIn chan *messages.Message, s *state.State, host, groupID string, myPartyID uint16) {
 	for {
 		select {
@@ -182,6 +122,7 @@ func ProcessKeygenMessages(msgsIn chan *messages.Message, s *state.State, host, 
 	}
 }
 
+// Goroutine for processing the Sign protocol messages
 func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ceremonyID string, myPartyID uint16) {
 	for {
 		select {
@@ -240,22 +181,6 @@ func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ce
 			return
 		}
 	}
-}
-
-func uint16ToHexBE(n uint16) string {
-	bytes := []byte{byte(n >> 8), byte(n)}
-	return hex.EncodeToString(bytes)
-}
-
-func hexBEToUint16(s string) (uint16, error) {
-	bytes, err := hex.DecodeString(s)
-	if err != nil {
-		return 0, err
-	}
-	if len(bytes) != 2 {
-		return 0, fmt.Errorf("expected 2 bytes, got %d", len(bytes))
-	}
-	return (uint16(bytes[0]) << 8) | uint16(bytes[1]), nil
 }
 
 // Join a keygen ceremony
