@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
@@ -41,16 +42,19 @@ func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
 	os.Exit(0)
 }
 
-func HashMessageForSanity(data []byte) string {
-	hash := sha512.Sum384(data)
-	return hex.EncodeToString(hash[:])
+// This is just a consistency check for the message, so we can abort early if something mismatches
+func HashMessageForSanity(data []byte, groupID string) string {
+	key := sha512.Sum384([]byte(groupID))
+	mac := hmac.New(sha512.New384, key[:])
+	mac.Write(data)
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // Kicking off a key-signing ceremony
 func InitSignCeremony(host, groupID string, message []byte) {
 	req := InitSignRequest{
 		GroupID:     groupID,
-		MessageHash: HashMessageForSanity(message),
+		MessageHash: HashMessageForSanity(message, groupID),
 	}
 	res, err := DuctInitSignCeremony(host, req)
 	if err != nil {
@@ -323,7 +327,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	// Next, we need to actually join the signing quorum
 
 	// Next, we need to formally join the party and get your ID
-	hash := HashMessageForSanity(message)
+	hash := HashMessageForSanity(message, groupID)
 	joinRequest := JoinSignRequest{
 		CeremonyID:  ceremonyID,
 		MessageHash: hash,
@@ -446,6 +450,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		os.Exit(1)
 	}
 
+	// Final signature aggregation
 	groupSig := hex.EncodeToString(signOutput.Signature.ToEd25519())
 	fmt.Printf("Signature:\n%s\n", groupSig)
 }
