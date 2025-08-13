@@ -1,9 +1,19 @@
 package internal
 
 import (
+	"crypto/hmac"
+	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
 )
+
+// This is just a consistency check for the message, so we can abort early if something mismatches
+func HashMessageForSanity(data []byte, groupID string) string {
+	key := sha512.Sum384([]byte(groupID))
+	mac := hmac.New(sha512.New384, key[:])
+	mac.Write(data)
+	return hex.EncodeToString(mac.Sum(nil))
+}
 
 func uint16ToHexBE(n uint16) string {
 	bytes := []byte{byte(n >> 8), byte(n)}

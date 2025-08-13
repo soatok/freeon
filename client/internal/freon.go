@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"crypto/hmac"
-	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -40,14 +38,6 @@ func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
 	}
 	fmt.Printf("Distributed key generation ceremony created! Group ID:\n%s\n", res.GroupID)
 	os.Exit(0)
-}
-
-// This is just a consistency check for the message, so we can abort early if something mismatches
-func HashMessageForSanity(data []byte, groupID string) string {
-	key := sha512.Sum384([]byte(groupID))
-	mac := hmac.New(sha512.New384, key[:])
-	mac.Write(data)
-	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // Kicking off a key-signing ceremony
@@ -308,8 +298,8 @@ func ListKeyGen() {
 	}
 }
 
+// Join a signing ceremony
 func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
-	//, autoConfirm bool
 	// First, poll the server to get metadata
 	pollRequest := PollSignRequest{
 		CeremonyID: ceremonyID,
@@ -323,8 +313,6 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	myPartyID := party.ID(pollResponse.MyPartyID)
 	groupID := pollResponse.GroupID
 	threshold := pollResponse.Threshold
-
-	// Next, we need to actually join the signing quorum
 
 	// Next, we need to formally join the party and get your ID
 	hash := HashMessageForSanity(message, groupID)
@@ -359,6 +347,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		time.Sleep(time.Second)
 	}
 
+	// Let's pull in the data from thee local config:
 	config, err := LoadUserConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
@@ -372,6 +361,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 			encryptedShare = s.EncryptedShare
 			publicSharesHex = s.PublicShares
 			publicKeyHex = s.PublicKey
+			break
 		}
 	}
 	if encryptedShare == "" {
@@ -380,7 +370,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	}
 	rawPk, err := hex.DecodeString(publicKeyHex)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not find encrypted share for group %s", groupID)
+		fmt.Fprintf(os.Stderr, "could not decode encrypted share for group %s", groupID)
 		os.Exit(1)
 	}
 
@@ -403,7 +393,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		publicShares[pid] = el
 	}
 
-	// Let's decrypt with age
+	// Let's decrypt the local share with age
 	secretBytes, err := DecryptShareFor(encryptedShare, identityFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
@@ -426,7 +416,6 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	var pkEl *ristretto.Element
 	pkEl.SetCanonicalBytes(rawPk)
 	pk := eddsa.NewPublicKeyFromPoint(pkEl)
-
 	publicData := eddsa.Public{
 		PartyIDs:  set,
 		Threshold: party.Size(threshold),
@@ -434,6 +423,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		GroupKey:  pk,
 	}
 
+	// Initilize the Sign ceremony state
 	state, signOutput, err := frost.NewSignState(set, &secret, &publicData, message, timeout)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
