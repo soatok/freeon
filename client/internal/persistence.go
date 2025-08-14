@@ -6,20 +6,6 @@ import (
 	"path/filepath"
 )
 
-// Shares from keygen ceremonies are stored (encrypted)
-type Shares struct {
-	Host           string            `json:"host"`
-	GroupID        string            `json:"group-id"`
-	PublicKey      string            `json:"public-key"`
-	EncryptedShare string            `json:"encrypted-share"`
-	PublicShares   map[string]string `json:"public-shares"`
-}
-
-// This may expand in future versions
-type FreonConfig struct {
-	Shares []Shares `json:"shares"`
-}
-
 func getConfigFile() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {

@@ -1,5 +1,20 @@
 package internal
 
+// Shares from keygen ceremonies are stored (encrypted)
+type Shares struct {
+	Host           string            `json:"host"`
+	GroupID        string            `json:"group-id"`
+	PublicKey      string            `json:"public-key"`
+	EncryptedShare string            `json:"encrypted-share"`
+	PublicShares   map[string]string `json:"public-shares"`
+}
+
+// This may expand in future versions
+type FreonConfig struct {
+	Shares []Shares `json:"shares"`
+}
+
+//------- Request/Response --------//
 type InitKeyGenRequest struct {
 	Participants uint16 `json:"n"`
 	Threshold    uint16 `json:"t"`
@@ -65,4 +80,26 @@ type SendKeyGenRequest struct {
 type SendKeyGenResponse struct {
 	Status   bool     `json:"status"`
 	Messages []string `json:"messages"`
+}
+
+type KeyGenMessageRequest struct {
+	GroupID   string
+	Message   string
+	MyPartyID uint16
+	LastSeen  int64
+}
+type KeyGenMessageResponse struct {
+	LatestMessageID int64
+	Messages        []string
+}
+
+type SignMessageRequest struct {
+	CeremonyID string
+	MyPartyID  uint16
+	Message    string
+	LastSeen   int64
+}
+type SignMessageResponse struct {
+	LatestMessageID int64
+	Messages        []string
 }

@@ -196,17 +196,6 @@ func DuctPollSignCeremony(host string, req PollSignRequest) (PollSignResponse, e
 	return response, nil
 }
 
-type KeyGenMessageRequest struct {
-	GroupID   string
-	Message   string
-	MyPartyID uint16
-	LastSeen  int64
-}
-type KeyGenMessageResponse struct {
-	LatestMessageID int64
-	Messages        []string
-}
-
 // Send keygen protocol messages
 func DuctKeygenProtocolMessage(host string, req KeyGenMessageRequest) (KeyGenMessageResponse, error) {
 	err := InitializeHttpClient()
@@ -227,17 +216,6 @@ func DuctKeygenProtocolMessage(host string, req KeyGenMessageRequest) (KeyGenMes
 	var response KeyGenMessageResponse
 	json.NewDecoder(resp.Body).Decode(&response)
 	return response, nil
-}
-
-type SignMessageRequest struct {
-	CeremonyID string
-	MyPartyID  uint16
-	Message    string
-	LastSeen   int64
-}
-type SignMessageResponse struct {
-	LatestMessageID int64
-	Messages        []string
 }
 
 // Send sign protocol messages

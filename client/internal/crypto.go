@@ -11,6 +11,7 @@ import (
 	"filippo.io/age"
 )
 
+// Encrypt a Shamir share to a public key, using age.
 func EncryptShare(recipientStr string, share []byte) (string, error) {
 	// Parse the recipient string (could be a public key or identity)
 	recipient, err := age.ParseX25519Recipient(recipientStr)
@@ -32,6 +33,8 @@ func EncryptShare(recipientStr string, share []byte) (string, error) {
 	return hex.EncodeToString(encryptedBuf.Bytes()), nil
 }
 
+// Decrypt an arbitrary hex-encoded string with a specific age identity.
+// If you do not have an age.Identity on hand, you probably want DecryptShareFor() instead.
 func DecryptShare(encryptedShareHex string, identity age.Identity) ([]byte, error) {
 	encryptedShare, err := hex.DecodeString(encryptedShareHex)
 	if err != nil {
@@ -51,6 +54,8 @@ func DecryptShare(encryptedShareHex string, identity age.Identity) ([]byte, erro
 	return decryptedData, nil
 }
 
+// We need a list of age.Identity structs to pass to age. This helper function
+// wraps age's existing API.
 func ParseAgeIdentityFile(filePath string) ([]age.Identity, error) {
 	// Open the identity file
 	file, err := os.Open(filePath)
@@ -72,6 +77,8 @@ func ParseAgeIdentityFile(filePath string) ([]age.Identity, error) {
 	return identities, nil
 }
 
+// This is the high-level API used for decryption. The inputs are sourced from the
+// Config (eencryptedShareHex) and CLI arguments (filePath) respectively.
 func DecryptShareFor(encryptedShareHex, filePath string) ([]byte, error) {
 	idents, err := ParseAgeIdentityFile(filePath)
 	if err != nil {

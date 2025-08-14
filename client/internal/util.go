@@ -2,6 +2,7 @@ package internal
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
@@ -29,4 +30,14 @@ func hexBEToUint16(s string) (uint16, error) {
 		return 0, fmt.Errorf("expected 2 bytes, got %d", len(bytes))
 	}
 	return (uint16(bytes[0]) << 8) | uint16(bytes[1]), nil
+}
+
+// We aren't using UUIDs here because they only have 126 bits of entropy
+func UniqueID() (string, error) {
+	b := make([]byte, 24)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
