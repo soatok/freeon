@@ -39,6 +39,7 @@ type InitSignRequest struct {
 	GroupID     string `json:"group-id"`
 	MessageHash string `json:"hash"`
 	OpenSSH     bool   `json:"openssh"`
+	Namespace   string `json:"openssh-namespace"`
 }
 type InitSignResponse struct {
 	CeremonyID string `json:"ceremony-id"`
@@ -69,7 +70,9 @@ type JoinSignRequest struct {
 	MyPartyID   uint16 `json:"party-id"`
 }
 type JoinSignResponse struct {
-	Status bool `json:"status"`
+	Status    bool   `json:"status"`
+	OpenSSH   bool   `json:"openssh"`
+	Namespace string `json:"openssh-namespace"`
 }
 
 type SendKeyGenRequest struct {
@@ -95,12 +98,28 @@ type KeyGenMessageResponse struct {
 }
 
 type SignMessageRequest struct {
-	CeremonyID string
-	MyPartyID  uint16
-	Message    string
-	LastSeen   int64
+	CeremonyID string `json:"ceremony-id"`
+	MyPartyID  uint16 `json:"party-id"`
+	Message    string `json:"message"`
+	LastSeen   int64  `json:"last-seen"`
 }
 type SignMessageResponse struct {
-	LatestMessageID int64
-	Messages        []string
+	LatestMessageID int64    `json:"last-seen"`
+	Messages        []string `json:"messages"`
+}
+
+type KeygenFinalRequest struct {
+	GroupID   string `json:"group-id"`
+	MyPartyID uint16 `json:"party-id"`
+	PublicKey string `json:"public-key"`
+}
+
+type SignFinalRequest struct {
+	CeremonyID string `json:"ceremony-id"`
+	MyPartyID  uint16 `json:"party-id"`
+	Signature  string `json:"signature"`
+}
+
+type VapidResponse struct {
+	Status string `json:"status"`
 }

@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func NewSignGroup(db *sql.DB, groupUid string, hash string, openssh bool) (string, error) {
+func NewSignGroup(db *sql.DB, groupUid string, hash string, openssh bool, namespace string) (string, error) {
 	// Unique ID (192 bits entropy)
 	uid, err := UniqueID()
 	if err != nil {
@@ -19,7 +19,7 @@ func NewSignGroup(db *sql.DB, groupUid string, hash string, openssh bool) (strin
 		return "", err
 	}
 
-	stmt, err := db.Prepare("INSERT INTO ceremonies (uid, groupid, hash, openssh) VALUES (?, ?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO ceremonies (uid, groupid, hash, openssh, opensshnamespace) VALUES (?, ?, ?, ?, ?)")
 	if err != nil {
 		return "", err
 	}
@@ -153,4 +153,17 @@ func AddSignMessage(db *sql.DB, ceremonyUid string, myPartyID uint16, message []
 	}
 	msg.DbId = id
 	return msg, nil
+}
+
+func SetSignature(db *sql.DB, ceremonyUid, sig string) error {
+	ceremony, err := GetCeremonyData(db, ceremonyUid)
+	if err != nil {
+		return err
+	}
+
+	if ceremony.Signature != nil {
+		return errors.New("signature is already defined")
+	}
+
+	return FinalizeSignature(db, ceremony, sig)
 }

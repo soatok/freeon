@@ -25,10 +25,11 @@ func DbEnsureTablesExist(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS ceremonies (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		groupid INTEGER REFERENCES keygroups(id),
-		uid TEXT NOT NULL
-		active BOOLEAN DEFAULT TRUE
-		openssh BOOLEAN DEFAULT FALSE
-		hash TEXT
+		uid TEXT NOT NULL,
+		active BOOLEAN DEFAULT TRUE,
+		openssh BOOLEAN DEFAULT FALSE,
+		opensshnamespace TEXT NULL,
+		hash TEXT,
 		signature TEXT NULL
 	);
 	CREATE TABLE IF NOT EXISTS players (
@@ -193,7 +194,7 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 
 func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	stmt, err := db.Prepare(`SELECT
-		id, groupid, active, hash, signature, openssh FROM ceremonies 
+		id, groupid, active, hash, signature, openssh, opensshnamespace FROM ceremonies 
 		WHERE uid = ?`)
 	if err != nil {
 		return FreonCeremonies{}, err
@@ -488,4 +489,16 @@ func FinalizeGroup(db *sql.DB, g FreonGroup) error {
 		return err
 	}
 	return nil
+}
+
+func FinalizeSignature(db *sql.DB, c FreonCeremonies, sig string) error {
+	if !c.Active {
+		return errors.New("group is already finalized")
+	}
+	stmt, err := db.Prepare(`UPDATE ceremonies SET signature = ?, active = FALSE WHERE id = ?`)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(sig, c.DbId)
+	return err
 }

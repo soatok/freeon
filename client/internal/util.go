@@ -4,8 +4,12 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"slices"
+
+	"github.com/taurusgroup/frost-ed25519/pkg/frost/party"
 )
 
 // This is just a consistency check for the message, so we can abort early if something mismatches
@@ -40,4 +44,33 @@ func UniqueID() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// Given a hash, party ID, and list of all party IDs:
+// Select a pseudorandom element of party.
+// The last 8 bytes of hash are converted to a uint64, then reduced modulo the size of the party
+// If the result of this reduction equals your party ID, you are elected
+func AmIElected(ch []byte, me uint16, party []uint16) bool {
+	if len(party) < 2 {
+		return true
+	}
+	buf := ch[len(ch)-8:]
+	unbiased := binary.BigEndian.Uint64(buf)
+	ps := uint64(len(party))
+	index := unbiased % ps
+	return party[index] == me
+}
+
+// Given a party.IDSlice, get a sorted []uint16 of party IDs.
+func PartyToUint16(party party.IDSlice) []uint16 {
+	var party16 []uint16
+	for p := range party {
+		party16 = append(party16, uint16(p))
+	}
+	slices.Sort(party16)
+	return party16
+}
+
+func OpenSSHEncode(pk, sig []byte, namespace string) string {
+	return makeOpenSSHSignature(pk, sig, namespace)
 }

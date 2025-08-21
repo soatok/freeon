@@ -55,11 +55,13 @@ func main() {
 	http.HandleFunc("/keygen/join", joinKeygen)
 	http.HandleFunc("/keygen/poll", pollKeygen)
 	http.HandleFunc("/keygen/send", sendKeygen)
+	http.HandleFunc("/keygen/finalize", finalizeKeygen)
 
 	http.HandleFunc("/sign/create", createSign)
 	http.HandleFunc("/sign/join", joinSign)
 	http.HandleFunc("/sign/poll", pollSign)
 	http.HandleFunc("/sign/send", sendSign)
+	http.HandleFunc("/sign/finalize", finalizeSign)
 
 	http.HandleFunc("/terminate", terminateSign)
 	http.ListenAndServe(serverConfig.Hostname, sessionManager.LoadAndSave(mux))
@@ -225,7 +227,7 @@ func createSign(w http.ResponseWriter, r *http.Request) {
 		sendError(w, err)
 		return
 	}
-	uid, err := internal.NewSignGroup(db, req.GroupID, req.MessageHash, req.OpenSSH)
+	uid, err := internal.NewSignGroup(db, req.GroupID, req.MessageHash, req.OpenSSH, req.Namespace)
 	if err != nil {
 		sendError(w, err)
 		return
@@ -324,6 +326,51 @@ func sendSign(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// Store the final public key for the group
+func finalizeKeygen(w http.ResponseWriter, r *http.Request) {
+	var req KeygenFinalRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	err = internal.SetGroupPublicKey(db, req.GroupID, req.PublicKey)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// Return a vapid response.
+	response := VapidResponse{
+		Status: "OK",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Store the final signature for the ceremony
+func finalizeSign(w http.ResponseWriter, r *http.Request) {
+	var req SignFinalRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	err = internal.SetSignature(db, req.CeremonyID, req.Signature)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// Return a vapid response.
+	response := VapidResponse{
+		Status: "OK",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
 }
 
 func terminateSign(w http.ResponseWriter, r *http.Request) {
