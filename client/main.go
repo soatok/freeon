@@ -125,6 +125,7 @@ func readInput(filename string) ([]byte, error) {
 
 // CMD: `freon keygen create ...`
 func FreonKeygenCreate(args []string) {
+	// Parse CLI arguments:
 	fs := flag.NewFlagSet("keygen create", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", keygenCreateUsage) }
 	host := fs.String("h", "", "Coordinator hostname:port")
@@ -177,11 +178,13 @@ func FreonKeygenCreate(args []string) {
 	}
 
 	// Now that we have a configuration, let's initialize the ceremony
+	// The actual logic is implemented here:
 	internal.InitKeyGenCeremony(*host, uint16(*participants), uint16(*threshold))
 }
 
 // CMD: `freon keygen join ...`
 func FreonKeygenJoin(args []string) {
+	// Parse CLI arguments:
 	fs := flag.NewFlagSet("keygen join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", keygenJoinUsage) }
 	host := fs.String("h", "", "Coordinator hostname:port")
@@ -220,11 +223,13 @@ func FreonKeygenJoin(args []string) {
 		os.Exit(1)
 	}
 
+	// The actual logic is implemented here:
 	internal.JoinKeyGenCeremony(*host, *groupID, *recipient)
 }
 
 // CMD: `freon keygen list ...`
 func FreonKeygenList(args []string) {
+	// The actual logic is implemented here:
 	internal.ListKeyGen()
 }
 
@@ -278,11 +283,14 @@ func FreonSignCreate(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
+
+	// The actual logic is implemented here:
 	internal.InitSignCeremony(*groupID, *host, message, *openssh, *namespace)
 }
 
 // CMD: `freon sign join ...`
 func FreonSignJoin(args []string) {
+	// Parse CLI arguments:
 	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signJoinUsage) }
 	ceremonyID := fs.String("c", "", "Ceremony ID")
@@ -294,6 +302,7 @@ func FreonSignJoin(args []string) {
 	// autoConfirm := fs.Bool("auto-confirm", false, "Skip message confirmation prompt")
 	fs.Parse(args)
 
+	// Merge short/long flags
 	if *ceremonyIDLong != "" {
 		*ceremonyID = *ceremonyIDLong
 	}
@@ -314,19 +323,25 @@ func FreonSignJoin(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
+
+	// The actual logic is implemented here:
 	internal.JoinSignCeremony(*ceremonyID, *host, *identity, message)
-	// , *autoConfirm)
 }
 
 // CMD: `freon sign terminate ...`
 func FreonTerminate(args []string) {
+	// Parse CLI arguments:
 	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", terminateUsage) }
 	ceremonyID := fs.String("c", "", "Ceremony ID")
 	ceremonyIDLong := fs.String("ceremony", "", "Ceremony ID")
 	fs.Parse(args)
+
+	// Merge short/long flags
 	if *ceremonyIDLong != "" {
 		*ceremonyID = *ceremonyIDLong
 	}
+
+	// The actual logic is implemented here:
 	internal.TerminateSignCeremony(*ceremonyID)
 }
