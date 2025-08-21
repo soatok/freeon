@@ -193,7 +193,7 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 
 func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	stmt, err := db.Prepare(`SELECT
-		id, groupid, active, hash, signature FROM ceremonies 
+		id, groupid, active, hash, signature, openssh FROM ceremonies 
 		WHERE uid = ?`)
 	if err != nil {
 		return FreonCeremonies{}, err
@@ -205,7 +205,8 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	var active bool
 	var hash string
 	var signature *string
-	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature)
+	var openssh bool
+	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature, &openssh)
 	if err != nil {
 		return FreonCeremonies{}, err
 	}
@@ -216,6 +217,7 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 		Active:    active,
 		Hash:      hash,
 		Signature: signature,
+		OpenSSH:   openssh,
 	}, nil
 }
 
