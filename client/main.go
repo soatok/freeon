@@ -123,7 +123,7 @@ func readInput(filename string) ([]byte, error) {
 	return io.ReadAll(os.Stdin)
 }
 
-// Handle "freon keygen create [...]"
+// CMD: `freon keygen create ...`
 func FreonKeygenCreate(args []string) {
 	fs := flag.NewFlagSet("keygen create", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", keygenCreateUsage) }
@@ -180,6 +180,7 @@ func FreonKeygenCreate(args []string) {
 	internal.InitKeyGenCeremony(*host, uint16(*participants), uint16(*threshold))
 }
 
+// CMD: `freon keygen join ...`
 func FreonKeygenJoin(args []string) {
 	fs := flag.NewFlagSet("keygen join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", keygenJoinUsage) }
@@ -222,11 +223,14 @@ func FreonKeygenJoin(args []string) {
 	internal.JoinKeyGenCeremony(*host, *groupID, *recipient)
 }
 
+// CMD: `freon keygen list ...`
 func FreonKeygenList(args []string) {
 	internal.ListKeyGen()
 }
 
+// CMD: `freon sign create ...`
 func FreonSignCreate(args []string) {
+	// Parse CLI arguments:
 	fs := flag.NewFlagSet("sign create", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signCreateUsage) }
 	groupID := fs.String("g", "", "Group ID from DKG ceremony")
@@ -277,6 +281,7 @@ func FreonSignCreate(args []string) {
 	internal.InitSignCeremony(*groupID, *host, message, *openssh, *namespace)
 }
 
+// CMD: `freon sign join ...`
 func FreonSignJoin(args []string) {
 	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signJoinUsage) }
@@ -313,6 +318,7 @@ func FreonSignJoin(args []string) {
 	// , *autoConfirm)
 }
 
+// CMD: `freon sign terminate ...`
 func FreonTerminate(args []string) {
 	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", terminateUsage) }
