@@ -263,6 +263,7 @@ func sendKeygen(w http.ResponseWriter, r *http.Request) {
 type InitSignRequest struct {
 	GroupID     string `json:"group-id"`
 	MessageHash string `json:"hash"`
+	OpenSSH     bool   `json:"openssh"`
 }
 type InitSignResponse struct {
 	CeremonyID string `json:"ceremony-id"`
@@ -275,7 +276,7 @@ func createSign(w http.ResponseWriter, r *http.Request) {
 		sendError(w, err)
 		return
 	}
-	uid, err := internal.NewSignGroup(db, req.GroupID, req.MessageHash)
+	uid, err := internal.NewSignGroup(db, req.GroupID, req.MessageHash, req.OpenSSH)
 	if err != nil {
 		sendError(w, err)
 		return

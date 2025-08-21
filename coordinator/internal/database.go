@@ -27,6 +27,7 @@ func DbEnsureTablesExist(db *sql.DB) error {
 		groupid INTEGER REFERENCES keygroups(id),
 		uid TEXT NOT NULL
 		active BOOLEAN DEFAULT TRUE
+		openssh BOOLEAN DEFAULT FALSE
 		hash TEXT
 		signature TEXT NULL
 	);

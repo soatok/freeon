@@ -38,6 +38,7 @@ type PollKeyGenResponse struct {
 type InitSignRequest struct {
 	GroupID     string `json:"group-id"`
 	MessageHash string `json:"hash"`
+	OpenSSH     bool   `json:"openssh"`
 }
 type InitSignResponse struct {
 	CeremonyID string `json:"ceremony-id"`

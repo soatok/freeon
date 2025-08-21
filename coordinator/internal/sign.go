@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-func NewSignGroup(db *sql.DB, groupUid string, hash string) (string, error) {
+func NewSignGroup(db *sql.DB, groupUid string, hash string, openssh bool) (string, error) {
 	// Unique ID (192 bits entropy)
 	uid, err := UniqueID()
 	if err != nil {
@@ -19,11 +19,11 @@ func NewSignGroup(db *sql.DB, groupUid string, hash string) (string, error) {
 		return "", err
 	}
 
-	stmt, err := db.Prepare("INSERT INTO ceremonies (uid, groupid, hash) VALUES (?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO ceremonies (uid, groupid, hash, openssh) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return "", err
 	}
-	_, err = stmt.Exec(uid, groupData.DbId, hash)
+	_, err = stmt.Exec(uid, groupData.DbId, hash, openssh)
 	if err != nil {
 		return "", err
 	}

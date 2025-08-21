@@ -233,7 +233,7 @@ func FreonSignCreate(args []string) {
 	groupIDLong := fs.String("group", "", "Group ID from DKG ceremony")
 	host := fs.String("h", "", "Coordinator hostname:port")
 	hostLong := fs.String("host", "", "Coordinator hostname:port")
-	// openssh := fs.Bool("openssh", false, "Return OpenSSH-compatible signature format")
+	openssh := fs.Bool("openssh", false, "Return OpenSSH-compatible signature format")
 	fs.Parse(args)
 
 	// Merge short/long flags
