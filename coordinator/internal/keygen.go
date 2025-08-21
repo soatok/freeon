@@ -97,3 +97,15 @@ func AddKeyGenMessage(db *sql.DB, groupUid string, myPartyID uint16, message []b
 	msg.DbId = id
 	return msg, nil
 }
+
+func SetGroupPublicKey(db *sql.DB, groupUid string, publicKey string) error {
+	group, err := GetGroupData(db, groupUid)
+	if err != nil {
+		return err
+	}
+	if group.PublicKey != nil {
+		return errors.New("public key is already defined")
+	}
+	group.PublicKey = &publicKey
+	return FinalizeGroup(db, group)
+}

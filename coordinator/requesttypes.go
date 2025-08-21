@@ -1,26 +1,26 @@
-package internal
+package main
 
-// Shares from keygen ceremonies are stored (encrypted)
-type Shares struct {
-	Host           string            `json:"host"`
-	GroupID        string            `json:"group-id"`
-	PublicKey      string            `json:"public-key"`
-	EncryptedShare string            `json:"encrypted-share"`
-	PublicShares   map[string]string `json:"public-shares"`
+type ResponseMainPage struct {
+	Message string `json:"message"`
+}
+type ResponseErrorPage struct {
+	Error string `json:"message"`
 }
 
-// This may expand in future versions
-type FreonConfig struct {
-	Shares []Shares `json:"shares"`
-}
-
-//------- Request/Response --------//
 type InitKeyGenRequest struct {
 	Participants uint16 `json:"n"`
 	Threshold    uint16 `json:"t"`
 }
 type InitKeyGenResponse struct {
 	GroupID string `json:"group-id"`
+}
+
+type JoinKeyGenRequest struct {
+	GroupID string `json:"group-id"`
+}
+type JoinKeyGenResponse struct {
+	Status    bool   `json:"status"`
+	MyPartyID uint16 `json:"my-party-id"`
 }
 
 type PollKeyGenRequest struct {
@@ -35,6 +35,17 @@ type PollKeyGenResponse struct {
 	PartySize    uint16   `json:"n"`
 }
 
+type KeyGenMessageRequest struct {
+	GroupID   string
+	Message   string
+	MyPartyID uint16
+	LastSeen  int64
+}
+type KeyGenMessageResponse struct {
+	LatestMessageID int64
+	Messages        []string
+}
+
 type InitSignRequest struct {
 	GroupID     string `json:"group-id"`
 	MessageHash string `json:"hash"`
@@ -43,25 +54,6 @@ type InitSignRequest struct {
 }
 type InitSignResponse struct {
 	CeremonyID string `json:"ceremony-id"`
-}
-
-type PollSignRequest struct {
-	CeremonyID string  `json:"ceremony-id"`
-	PartyID    *uint16 `json:"party-id"`
-}
-type PollSignResponse struct {
-	GroupID      string   `json:"group-id"`
-	MyPartyID    uint16   `json:"party-id"`
-	Threshold    uint16   `json:"t"`
-	OtherParties []uint16 `json:"parties"`
-}
-
-type JoinKeyGenRequest struct {
-	GroupID string `json:"group-id"`
-}
-type JoinKeyGenResponse struct {
-	Status    bool   `json:"status"`
-	MyPartyID uint16 `json:"my-party-id"`
 }
 
 type JoinSignRequest struct {
@@ -75,26 +67,9 @@ type JoinSignResponse struct {
 	Namespace string `json:"openssh-namespace"`
 }
 
-type SendKeyGenRequest struct {
-	GroupID    string `json:"group-id"`
-	MyPartyID  uint16 `json:"party-id"`
-	LastIDSeen int64  `json:"last-seen-id"`
-	Message    string `json:"message"`
-}
-type SendKeyGenResponse struct {
-	Status   bool     `json:"status"`
-	Messages []string `json:"messages"`
-}
-
-type KeyGenMessageRequest struct {
-	GroupID   string
-	Message   string
-	MyPartyID uint16
-	LastSeen  int64
-}
-type KeyGenMessageResponse struct {
-	LatestMessageID int64
-	Messages        []string
+type PollSignRequest struct {
+	CeremonyID string  `json:"ceremony-id"`
+	PartyID    *uint16 `json:"party-id"`
 }
 
 type SignMessageRequest struct {

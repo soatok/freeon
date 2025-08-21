@@ -48,6 +48,8 @@ func GetApiEndpoint(host string, feature string) (string, error) {
 		u.Path = "/keygen/poll"
 	case "SendKeygenMessage":
 		u.Path = "/keygen/send"
+	case "FinalizeKeygenMessage":
+		u.Path = "/keygen/finalize"
 	case "InitSignCeremony":
 		u.Path = "/sign/create"
 	case "PollSignCeremony":
@@ -56,6 +58,8 @@ func GetApiEndpoint(host string, feature string) (string, error) {
 		u.Path = "/sign/join"
 	case "SendSignMessage":
 		u.Path = "/sign/send"
+	case "FinalizeSignMessage":
+		u.Path = "/sign/finalize"
 	case "TerminateSignCeremony":
 		u.Path = "/sign/terminate"
 	default:
@@ -238,4 +242,38 @@ func DuctSignProtocolMessage(host string, req SignMessageRequest) (SignMessageRe
 	var response SignMessageResponse
 	json.NewDecoder(resp.Body).Decode(&response)
 	return response, nil
+}
+
+func DuctKeygenFinalize(host string, req KeygenFinalRequest) error {
+	err := InitializeHttpClient()
+	if err != nil {
+		return err
+	}
+	uri, err := GetApiEndpoint(host, "FinalizeKeygenMessage")
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	_, err = httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	return err
+}
+
+func DuctSignFinalize(host string, req SignFinalRequest) error {
+	err := InitializeHttpClient()
+	if err != nil {
+		return err
+	}
+	uri, err := GetApiEndpoint(host, "FinalizeSignMessage")
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	_, err = httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	return err
 }

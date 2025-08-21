@@ -30,6 +30,7 @@ type FreonCeremonies struct {
 	Active    bool
 	Hash      string
 	Signature *string
+	OpenSSH   bool
 }
 
 type FreonPlayers struct {

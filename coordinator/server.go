@@ -15,13 +15,6 @@ import (
 	_ "github.com/taurusgroup/frost-ed25519/pkg/frost"
 )
 
-type ResponseMainPage struct {
-	Message string `json:"message"`
-}
-type ResponseErrorPage struct {
-	Error string `json:"message"`
-}
-
 var sessionManager *scs.SessionManager
 var db *sql.DB
 
@@ -35,7 +28,7 @@ func main() {
 
 	// Database
 	// Open database (creates file if it doesn't exist)
-	db, err = sql.Open("sqlite3", "./example.db")
+	db, err = sql.Open("sqlite3", serverConfig.Database)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
 		os.Exit(1)
@@ -62,11 +55,13 @@ func main() {
 	http.HandleFunc("/keygen/join", joinKeygen)
 	http.HandleFunc("/keygen/poll", pollKeygen)
 	http.HandleFunc("/keygen/send", sendKeygen)
+	http.HandleFunc("/keygen/finalize", finalizeKeygen)
 
 	http.HandleFunc("/sign/create", createSign)
 	http.HandleFunc("/sign/join", joinSign)
 	http.HandleFunc("/sign/poll", pollSign)
 	http.HandleFunc("/sign/send", sendSign)
+	http.HandleFunc("/sign/finalize", finalizeSign)
 
 	http.HandleFunc("/terminate", terminateSign)
 	http.ListenAndServe(serverConfig.Hostname, sessionManager.LoadAndSave(mux))
@@ -89,14 +84,6 @@ func indexPage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type InitKeyGenRequest struct {
-	Participants uint16 `json:"n"`
-	Threshold    uint16 `json:"t"`
-}
-type InitKeyGenResponse struct {
-	GroupID string `json:"group-id"`
-}
-
 // Initialize a key generation ceremony
 func createKeygen(w http.ResponseWriter, r *http.Request) {
 	var req InitKeyGenRequest
@@ -117,14 +104,7 @@ func createKeygen(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type JoinKeyGenRequest struct {
-	GroupID string `json:"group-id"`
-}
-type JoinKeyGenResponse struct {
-	Status    bool   `json:"status"`
-	MyPartyID uint16 `json:"my-party-id"`
-}
-
+// Join a key ceremony as a participant
 func joinKeygen(w http.ResponseWriter, r *http.Request) {
 	var req JoinKeyGenRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -146,18 +126,7 @@ func joinKeygen(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type PollKeyGenRequest struct {
-	GroupID string  `json:"group-id"`
-	PartyID *uint16 `json:"party-id,omitempty"`
-}
-type PollKeyGenResponse struct {
-	GroupID      string   `json:"group-id"`
-	MyPartyID    *uint16  `json:"party-id"`
-	OtherParties []uint16 `json:"parties"`
-	Threshold    uint16   `json:"t"`
-	PartySize    uint16   `json:"n"`
-}
-
+// Poll a keygen ceremony to get the status
 func pollKeygen(w http.ResponseWriter, r *http.Request) {
 	var req PollKeyGenRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -202,17 +171,7 @@ func pollKeygen(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type KeyGenMessageRequest struct {
-	GroupID   string
-	Message   string
-	MyPartyID uint16
-	LastSeen  int64
-}
-type KeyGenMessageResponse struct {
-	LatestMessageID int64
-	Messages        []string
-}
-
+// Send a message to participate in a keygen ceremony
 func sendKeygen(w http.ResponseWriter, r *http.Request) {
 	var req KeyGenMessageRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -260,14 +219,7 @@ func sendKeygen(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type InitSignRequest struct {
-	GroupID     string `json:"group-id"`
-	MessageHash string `json:"hash"`
-}
-type InitSignResponse struct {
-	CeremonyID string `json:"ceremony-id"`
-}
-
+// Create a signing ceremony
 func createSign(w http.ResponseWriter, r *http.Request) {
 	var req InitSignRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -275,7 +227,7 @@ func createSign(w http.ResponseWriter, r *http.Request) {
 		sendError(w, err)
 		return
 	}
-	uid, err := internal.NewSignGroup(db, req.GroupID, req.MessageHash)
+	uid, err := internal.NewSignGroup(db, req.GroupID, req.MessageHash, req.OpenSSH, req.Namespace)
 	if err != nil {
 		sendError(w, err)
 		return
@@ -288,15 +240,7 @@ func createSign(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type JoinSignRequest struct {
-	CeremonyID  string `json:"ceremony-id"`
-	MessageHash string `json:"hash"`
-	MyPartyID   uint16 `json:"party-id"`
-}
-type JoinSignResponse struct {
-	Status bool `json:"status"`
-}
-
+// Join an existing signing ceremony
 func joinSign(w http.ResponseWriter, r *http.Request) {
 	var req JoinSignRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -317,11 +261,7 @@ func joinSign(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type PollSignRequest struct {
-	CeremonyID string  `json:"ceremony-id"`
-	PartyID    *uint16 `json:"party-id"`
-}
-
+// Poll the status of a signing ceremony
 func pollSign(w http.ResponseWriter, r *http.Request) {
 	var req PollSignRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -340,17 +280,7 @@ func pollSign(w http.ResponseWriter, r *http.Request) {
 
 }
 
-type SignMessageRequest struct {
-	CeremonyID string
-	MyPartyID  uint16
-	Message    string
-	LastSeen   int64
-}
-type SignMessageResponse struct {
-	LatestMessageID int64
-	Messages        []string
-}
-
+// Send a message to a signing ceremony
 func sendSign(w http.ResponseWriter, r *http.Request) {
 	var req SignMessageRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -396,6 +326,51 @@ func sendSign(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// Store the final public key for the group
+func finalizeKeygen(w http.ResponseWriter, r *http.Request) {
+	var req KeygenFinalRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	err = internal.SetGroupPublicKey(db, req.GroupID, req.PublicKey)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// Return a vapid response.
+	response := VapidResponse{
+		Status: "OK",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Store the final signature for the ceremony
+func finalizeSign(w http.ResponseWriter, r *http.Request) {
+	var req SignFinalRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	err = internal.SetSignature(db, req.CeremonyID, req.Signature)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// Return a vapid response.
+	response := VapidResponse{
+		Status: "OK",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
 }
 
 func terminateSign(w http.ResponseWriter, r *http.Request) {

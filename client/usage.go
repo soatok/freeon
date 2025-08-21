@@ -118,11 +118,13 @@ OPTIONS:
     -g, --group <GROUP_ID>    Group ID from DKG ceremony
     -h, --host <HOST>         Coordinator hostname:port
         --help                Print help information
+    --openssh                 Return an OpenSSH formatted signature
+    --namespace <NAMESPACE>   Specify a namespace for OpenSSH (default: "file")
 
 EXAMPLES:
     freon sign create -g grp_abc123 message.txt
     echo "Hello World" | freon sign create -g grp_abc123 -
-    freon sign create -g grp_abc123 release.tar.gz
+    freon sign create -g grp_abc123  --openssh --namespace git release.tar.gz
 
 `
 

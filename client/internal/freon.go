@@ -1,8 +1,10 @@
 package internal
 
 import (
+	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"os"
 	"time"
 
@@ -25,6 +27,13 @@ var lastMessageIdSeen int64
 // See ProcessKeygenMessages() and ProcessSignMessages() below.
 var messagesIn chan *messages.Message
 
+// Used for determining which party should report the final result to the ceremony
+var ceremonyHash hash.Hash
+
+// Two prefixes for initializing the ceremony Hash state
+var ceremonyKeyGen = []byte("FREON KeyGen Ceremony v1")
+var ceremonySign = []byte("FREON Sign Ceremony v1")
+
 // Initialize a keygen ceremony with the coordinator
 func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
 	req := InitKeyGenRequest{
@@ -41,10 +50,12 @@ func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
 }
 
 // Kicking off a key-signing ceremony
-func InitSignCeremony(host, groupID string, message []byte) {
+func InitSignCeremony(host, groupID string, message []byte, openssh bool, namespace string) {
 	req := InitSignRequest{
 		GroupID:     groupID,
 		MessageHash: HashMessageForSanity(message, groupID),
+		OpenSSH:     openssh,
+		Namespace:   namespace,
 	}
 	res, err := DuctInitSignCeremony(host, req)
 	if err != nil {
@@ -235,6 +246,8 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 
 	// Use a goroutine for processing messages (which can append more messages)
 	lastMessageIdSeen = 0
+	ceremonyHash = sha512.New384()
+	ceremonyHash.Write(ceremonyKeyGen)
 	go ProcessKeygenMessages(messagesIn, state, host, groupID, joinResponse.MyPartyID)
 
 	err = state.WaitForError()
@@ -274,6 +287,19 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
 		os.Exit(1)
+	}
+	ch := ceremonyHash.Sum(nil)
+	if AmIElected(ch, uint16(myPartyID), PartyToUint16(partyMembers)) {
+		report := KeygenFinalRequest{
+			GroupID:   groupID,
+			MyPartyID: uint16(myPartyID),
+			PublicKey: groupKey,
+		}
+		err := DuctKeygenFinalize(host, report)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s", err.Error())
+			// This is only a reporting error, so do not error out.
+		}
 	}
 	fmt.Printf("Group public key:\n%s\n", groupKey)
 	// OK
@@ -332,6 +358,8 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		fmt.Fprintf(os.Stderr, "An unexpected error has occurred.\n")
 		os.Exit(1)
 	}
+	openssh := res.OpenSSH
+	opensshNamespace := res.Namespace
 
 	// Now let's begin polling the server until enough parties join
 	for {
@@ -432,6 +460,8 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 
 	// Use a goroutine for processing messages (which can append more messages)
 	lastMessageIdSeen = 0
+	ceremonyHash = sha512.New384()
+	ceremonyHash.Write(ceremonySign)
 	go ProcessSignMessages(messagesIn, state, host, groupID, uint16(myPartyID))
 
 	err = state.WaitForError()
@@ -441,7 +471,26 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	}
 
 	// Final signature aggregation
-	groupSig := hex.EncodeToString(signOutput.Signature.ToEd25519())
+	var groupSig string
+	if openssh {
+		groupSig = OpenSSHEncode(rawPk, signOutput.Signature.ToEd25519(), opensshNamespace)
+	} else {
+		groupSig = hex.EncodeToString(signOutput.Signature.ToEd25519())
+	}
+	ch := ceremonyHash.Sum(nil)
+
+	if AmIElected(ch, uint16(myPartyID), PartyToUint16(partyMembers)) {
+		report := SignFinalRequest{
+			CeremonyID: ceremonyID,
+			MyPartyID:  uint16(myPartyID),
+			Signature:  groupSig,
+		}
+		err := DuctSignFinalize(host, report)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s", err.Error())
+			// We do not abort here, since the only error was with reporting upstream
+		}
+	}
 	fmt.Printf("Signature:\n%s\n", groupSig)
 }
 

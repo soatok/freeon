@@ -233,7 +233,8 @@ func FreonSignCreate(args []string) {
 	groupIDLong := fs.String("group", "", "Group ID from DKG ceremony")
 	host := fs.String("h", "", "Coordinator hostname:port")
 	hostLong := fs.String("host", "", "Coordinator hostname:port")
-	// openssh := fs.Bool("openssh", false, "Return OpenSSH-compatible signature format")
+	openssh := fs.Bool("openssh", false, "Return OpenSSH-compatible signature format")
+	namespace := fs.String("namespace", "", `Specify a namespace for OpenSSH (default: "file")`)
 	fs.Parse(args)
 
 	// Merge short/long flags
@@ -250,6 +251,16 @@ func FreonSignCreate(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
+	if *openssh {
+		// Default to "file"
+		if *namespace == "" {
+			*namespace = "file"
+		}
+	} else if *namespace != "" {
+		fmt.Printf("--namespace can only be used with --openssh")
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	// Get message file from remaining args
 	remainingArgs := fs.Args()
@@ -263,7 +274,7 @@ func FreonSignCreate(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
-	internal.InitSignCeremony(*groupID, *host, message)
+	internal.InitSignCeremony(*groupID, *host, message, *openssh, *namespace)
 }
 
 func FreonSignJoin(args []string) {
