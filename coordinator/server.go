@@ -28,7 +28,7 @@ func main() {
 
 	// Database
 	// Open database (creates file if it doesn't exist)
-	db, err = sql.Open("sqlite3", "./example.db")
+	db, err = sql.Open("sqlite3", serverConfig.Database)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
 		os.Exit(1)
