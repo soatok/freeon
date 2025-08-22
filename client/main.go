@@ -62,6 +62,8 @@ func main() {
 		switch subcommand {
 		case "create":
 			FreonSignCreate(subArgs[1:])
+		case "list":
+			FreonSignList(subArgs[1:])
 		case "join":
 			FreonSignJoin(subArgs[1:])
 		default:
@@ -326,6 +328,40 @@ func FreonSignJoin(args []string) {
 
 	// The actual logic is implemented here:
 	internal.JoinSignCeremony(*ceremonyID, *host, *identity, message)
+}
+
+func FreonSignList(args []string) {
+	// Parse CLI arguments:
+	fs := flag.NewFlagSet("sign list", flag.ExitOnError)
+	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signListUsage) }
+	groupID := fs.String("g", "", "Group ID from DKG ceremony")
+	groupIDLong := fs.String("group", "", "Group ID from DKG ceremony")
+	host := fs.String("h", "", "Coordinator hostname:port")
+	hostLong := fs.String("host", "", "Coordinator hostname:port")
+	limit := fs.Int64("limit", 10, "Maximum number of ceremonies to return")
+	offset := fs.Int64("offset", 0, "Number of ceremonies to skip (for pagination)")
+	fs.Parse(args)
+
+	// Merge short/long flags
+	if *groupIDLong != "" {
+		*groupID = *groupIDLong
+	}
+	if *hostLong != "" {
+		*host = *hostLong
+	}
+
+	if *host == "" {
+		fmt.Fprintf(os.Stderr, "Error: -h/--host is required\n")
+		fs.Usage()
+		os.Exit(1)
+	}
+	if *groupID == "" {
+		fmt.Fprintf(os.Stderr, "Error: -g/--group is required\n")
+		fs.Usage()
+		os.Exit(1)
+	}
+
+	internal.ListSign(*host, *groupID, *limit, *offset)
 }
 
 // CMD: `freon sign terminate ...`

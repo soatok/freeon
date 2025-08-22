@@ -56,6 +56,8 @@ func GetApiEndpoint(host string, feature string) (string, error) {
 		u.Path = "/sign/poll"
 	case "JoinSignCeremony":
 		u.Path = "/sign/join"
+	case "ListSignCeremony":
+		u.Path = "/sign/list"
 	case "SendSignMessage":
 		u.Path = "/sign/send"
 	case "FinalizeSignMessage":
@@ -87,7 +89,10 @@ func DuctInitKeyGenCeremony(host string, req InitKeyGenRequest) (InitKeyGenRespo
 	defer resp.Body.Close()
 
 	var response InitKeyGenResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return InitKeyGenResponse{}, err
+	}
 	return response, nil
 }
 
@@ -109,7 +114,10 @@ func DuctJoinKeyGenCeremony(host string, req JoinKeyGenRequest) (JoinKeyGenRespo
 	defer resp.Body.Close()
 
 	var response JoinKeyGenResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return JoinKeyGenResponse{}, err
+	}
 	return response, nil
 }
 
@@ -131,7 +139,10 @@ func DuctPollKeyGenCeremony(host string, req PollKeyGenRequest) (PollKeyGenRespo
 	defer resp.Body.Close()
 
 	var response PollKeyGenResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return PollKeyGenResponse{}, err
+	}
 	return response, nil
 }
 
@@ -153,7 +164,10 @@ func DuctInitSignCeremony(host string, req InitSignRequest) (InitSignResponse, e
 	defer resp.Body.Close()
 
 	var response InitSignResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return InitSignResponse{}, err
+	}
 	return response, nil
 }
 
@@ -175,7 +189,10 @@ func DuctJoinSignCeremony(host string, req JoinSignRequest) (JoinSignResponse, e
 	defer resp.Body.Close()
 
 	var response JoinSignResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return JoinSignResponse{}, err
+	}
 	return response, nil
 }
 
@@ -196,7 +213,37 @@ func DuctPollSignCeremony(host string, req PollSignRequest) (PollSignResponse, e
 	defer resp.Body.Close()
 
 	var response PollSignResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return PollSignResponse{}, err
+	}
+	return response, nil
+}
+
+func DuctSignList(host string, req ListSignRequest) (ListSignResponse, error) {
+	err := InitializeHttpClient()
+	if err != nil {
+		return ListSignResponse{}, err
+	}
+	uri, err := GetApiEndpoint(host, "ListSignCeremony")
+	if err != nil {
+		return ListSignResponse{}, err
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return ListSignResponse{}, err
+	}
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return ListSignResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var response ListSignResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return ListSignResponse{}, err
+	}
 	return response, nil
 }
 

@@ -58,6 +58,7 @@ func main() {
 	http.HandleFunc("/keygen/finalize", finalizeKeygen)
 
 	http.HandleFunc("/sign/create", createSign)
+	http.HandleFunc("/sign/list", listSign)
 	http.HandleFunc("/sign/join", joinSign)
 	http.HandleFunc("/sign/poll", pollSign)
 	http.HandleFunc("/sign/send", sendSign)
@@ -371,6 +372,44 @@ func finalizeSign(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
+}
+
+// List the receent signing ceremonies for a given key group
+func listSign(w http.ResponseWriter, r *http.Request) {
+	var req ListSignRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	var limit int64
+	var offset int64
+
+	// Default values
+	if req.Limit == nil {
+		limit = 10
+	} else {
+		limit = *req.Limit
+	}
+	if req.Offset == nil {
+		offset = 0
+	} else {
+		offset = *req.Offset
+	}
+
+	list, err := internal.GetRecentCeremonies(db, req.GroupID, limit, offset)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// Return a vapid response.
+	response := ListSignResponse{
+		Ceremonies: list,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func terminateSign(w http.ResponseWriter, r *http.Request) {

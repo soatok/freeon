@@ -494,8 +494,46 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	fmt.Printf("Signature:\n%s\n", groupSig)
 }
 
-func ListSign(groupID string) {
-	// TODO - soatok
+// List the most recent signing ceremonies
+func ListSign(host, groupID string, limit, offset int64) {
+	req := ListSignRequest{
+		GroupID: groupID,
+		Limit:   limit,
+		Offset:  offset,
+	}
+	res, err := DuctSignList(host, req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	count := len(res.Ceremonies)
+	if count < 1 {
+		fmt.Printf("No ceremonies found.")
+		os.Exit(1)
+	}
+
+	// Loop over the list and print the output to the console.
+	fmt.Printf("Listing the most recent %d ceremonies:\n\n", count)
+	fmt.Printf("\tCeremony ID\tHash\tFormat\tOpen?\n")
+	fmt.Printf("\t-------------------------------------------------------------------------------\n")
+	for _, ceremony := range res.Ceremonies {
+		var format string
+		var status string
+
+		if ceremony.OpenSSH {
+			format = "OpeenSSH"
+		} else {
+			format = "Raw"
+		}
+		if ceremony.Active {
+			status = "Open"
+		} else {
+			status = " -- "
+		}
+		fmt.Printf("\t%s\t%s\t%s\t%s\n", ceremony.Uid, ceremony.Hash, format, status)
+	}
+	fmt.Printf("\n")
+	os.Exit(0)
 }
 
 func TerminateSignCeremony(ceremonyID string) {
