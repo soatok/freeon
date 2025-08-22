@@ -28,11 +28,17 @@ func NewKeyGroup(db *sql.DB, n, t uint16) (string, error) {
 
 // Create a blank slate participant ID
 func AddParticipant(db *sql.DB, groupUid string) (FreonParticipant, error) {
-	groupData, err := GetGroupData(db, groupUid)
+	tx, err := db.Begin()
 	if err != nil {
 		return FreonParticipant{}, err
 	}
-	participants, err := GetGroupParticipants(db, groupUid)
+	defer tx.Rollback() // Rollback on error
+
+	groupData, err := GetGroupData(tx, groupUid)
+	if err != nil {
+		return FreonParticipant{}, err
+	}
+	participants, err := GetGroupParticipants(tx, groupUid)
 	if err != nil {
 		return FreonParticipant{}, err
 	}
@@ -66,11 +72,16 @@ func AddParticipant(db *sql.DB, groupUid string) (FreonParticipant, error) {
 		PartyID: nextMaxId,
 		State:   []byte{},
 	}
-	id, err := InsertParticipant(db, p)
+	id, err := InsertParticipant(tx, p)
 	if err != nil {
 		return FreonParticipant{}, err
 	}
 	p.DbId = id
+
+	if err = tx.Commit(); err != nil {
+		return FreonParticipant{}, err
+	}
+
 	return p, nil
 }
 

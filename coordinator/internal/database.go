@@ -6,6 +6,13 @@ import (
 	"errors"
 )
 
+type DBTX interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Prepare(query string) (*sql.Stmt, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
 func DbEnsureTablesExist(db *sql.DB) error {
 	createTable := `
     CREATE TABLE IF NOT EXISTS keygroups (
@@ -58,7 +65,7 @@ func DbEnsureTablesExist(db *sql.DB) error {
 }
 
 // Get the row ID for a given group
-func GetGroupRowId(db *sql.DB, groupUid string) (int, error) {
+func GetGroupRowId(db DBTX, groupUid string) (int, error) {
 	stmt, err := db.Prepare("SELECT id FROM keygroups WHERE uid = ?")
 	if err != nil {
 		return 0, err
@@ -74,7 +81,7 @@ func GetGroupRowId(db *sql.DB, groupUid string) (int, error) {
 }
 
 // Get the row ID for a given group
-func GetGroupData(db *sql.DB, groupUid string) (FreonGroup, error) {
+func GetGroupData(db DBTX, groupUid string) (FreonGroup, error) {
 	stmt, err := db.Prepare("SELECT id, threshold, participants, publicKey FROM keygroups WHERE uid = ?")
 	if err != nil {
 		return FreonGroup{}, err
@@ -123,7 +130,7 @@ func GetGroupByID(db *sql.DB, groupID int64) (FreonGroup, error) {
 }
 
 // Get all of the participants for a group
-func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, error) {
+func GetGroupParticipants(db DBTX, groupUid string) ([]FreonParticipant, error) {
 	stmt, err := db.Prepare(`
 		SELECT
 			p.id,
@@ -430,7 +437,7 @@ func InsertCeremony(db *sql.DB, c FreonCeremonies) (int64, error) {
 	return id, nil
 }
 
-func InsertParticipant(db *sql.DB, p FreonParticipant) (int64, error) {
+func InsertParticipant(db DBTX, p FreonParticipant) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO participants (groupid, uid, partyid) VALUES (?, ?, ?)`)
 	if err != nil {
 		return 0, err

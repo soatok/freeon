@@ -48,14 +48,13 @@ func main() {
 	sessionManager = scs.New()
 	sessionManager.Lifetime = 12 * time.Hour
 
-	mux := http.NewServeMux()
-
 	http.HandleFunc("/", indexPage)
 
 	http.HandleFunc("/keygen/create", createKeygen)
 	http.HandleFunc("/keygen/join", joinKeygen)
 	http.HandleFunc("/keygen/poll", pollKeygen)
 	http.HandleFunc("/keygen/send", sendKeygen)
+	http.HandleFunc("/keygen/get-messages", getKeygenMessages)
 	http.HandleFunc("/keygen/finalize", finalizeKeygen)
 
 	http.HandleFunc("/sign/create", createSign)
@@ -63,11 +62,12 @@ func main() {
 	http.HandleFunc("/sign/join", joinSign)
 	http.HandleFunc("/sign/poll", pollSign)
 	http.HandleFunc("/sign/send", sendSign)
+	http.HandleFunc("/sign/get-messages", getSignMessages)
 	http.HandleFunc("/sign/finalize", finalizeSign)
 	http.HandleFunc("/sign/get", getSign)
 
 	http.HandleFunc("/terminate", terminateSign)
-	http.ListenAndServe(serverConfig.Hostname, sessionManager.LoadAndSave(mux))
+	http.ListenAndServe(serverConfig.Hostname, sessionManager.LoadAndSave(http.DefaultServeMux))
 }
 
 // Handler for error pages
@@ -170,6 +170,38 @@ func pollKeygen(w http.ResponseWriter, r *http.Request) {
 		PartySize:    group.Participants,
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Get messages for a keygen ceremony
+func getKeygenMessages(w http.ResponseWriter, r *http.Request) {
+	var req KeyGenMessageRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	inbox, err := internal.GetKeygenMessagesSince(db, req.GroupID, req.LastSeen)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	// Get a new maximum
+	var max = req.LastSeen
+	var messages []string
+	for _, m := range inbox {
+		if m.DbId >= max {
+			max = m.DbId
+		}
+		messages = append(messages, hex.EncodeToString(m.Message))
+	}
+
+	// Let's queue up the messages
+	response := KeyGenMessageResponse{
+		LatestMessageID: max,
+		Messages:        messages,
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
@@ -281,6 +313,38 @@ func pollSign(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
+}
+
+// Get messages for a signing ceremony
+func getSignMessages(w http.ResponseWriter, r *http.Request) {
+	var req SignMessageRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	inbox, err := internal.GetSignMessagesSince(db, req.CeremonyID, req.LastSeen)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	// Get a new maximum
+	var max = req.LastSeen
+	var messages []string
+	for _, m := range inbox {
+		if m.DbId >= max {
+			max = m.DbId
+		}
+		messages = append(messages, hex.EncodeToString(m.Message))
+	}
+
+	// Let's queue up the messages
+	response := SignMessageResponse{
+		LatestMessageID: max,
+		Messages:        messages,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // Send a message to a signing ceremony
