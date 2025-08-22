@@ -207,18 +207,20 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	var hash string
 	var signature *string
 	var openssh bool
-	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature, &openssh)
+	var opensshnamespace string
+	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature, &openssh, &opensshnamespace)
 	if err != nil {
 		return FreonCeremonies{}, err
 	}
 	return FreonCeremonies{
-		DbId:      id,
-		GroupID:   groupid,
-		Uid:       ceremonyID,
-		Active:    active,
-		Hash:      hash,
-		Signature: signature,
-		OpenSSH:   openssh,
+		DbId:             id,
+		GroupID:          groupid,
+		Uid:              ceremonyID,
+		Active:           active,
+		Hash:             hash,
+		Signature:        signature,
+		OpenSSH:          openssh,
+		OpenSSHNamespace: opensshnamespace,
 	}, nil
 }
 
@@ -366,7 +368,7 @@ func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]Fre
 			msg.sender,
 			msg.message
 		FROM ceremonies c
-		JOIN keysignmsg msg ON msg.groupid = g.id
+		JOIN signmsg msg ON msg.groupid = g.id
 		JOIN participants p ON msg.sender = p.id
 		WHERE c.uid = ? AND msg.id > ?
 	`)
