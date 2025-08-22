@@ -29,6 +29,9 @@ func EncryptShare(recipientStr string, share []byte) (string, error) {
 	if _, err := w.Write(share); err != nil {
 		return "", fmt.Errorf("failed to write data: %w", err)
 	}
+	if err = w.Close(); err != nil {
+		return "", fmt.Errorf("failed to close age writer: %w", err)
+	}
 
 	return hex.EncodeToString(encryptedBuf.Bytes()), nil
 }
@@ -86,7 +89,7 @@ func DecryptShareFor(encryptedShareHex, filePath string) ([]byte, error) {
 	}
 	for _, id := range idents {
 		decrypted, err := DecryptShare(encryptedShareHex, id)
-		if err != nil {
+		if err == nil {
 			return decrypted, nil
 		}
 	}
