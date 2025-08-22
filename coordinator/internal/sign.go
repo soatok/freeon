@@ -71,6 +71,7 @@ func JoinSignCeremony(db *sql.DB, ceremonyID, hash string, myPartyID uint16) (in
 func PollSignCeremony(db *sql.DB, ceremonyID string, myPartyID uint16) (PollSignResponse, error) {
 	ceremonyData, err := GetCeremonyData(db, ceremonyID)
 	if err != nil {
+		panic(err)
 		return PollSignResponse{}, err
 	}
 

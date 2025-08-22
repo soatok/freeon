@@ -49,7 +49,6 @@ type FreonPlayers struct {
 	CeremonyID    int64
 	ParticipantID int64
 	PartyID       uint16
-	State         []byte
 }
 
 type FreonSignMessage struct {

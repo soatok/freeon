@@ -60,7 +60,6 @@ func TestParticipantFunctions(t *testing.T) {
 		GroupID: gid,
 		Uid:     "test_participant",
 		PartyID: 1,
-		State:   []byte("state1"),
 	}
 	pid, err := internal.InsertParticipant(db, p)
 	assert.NoError(t, err)
@@ -77,16 +76,6 @@ func TestParticipantFunctions(t *testing.T) {
 	participantID, err := internal.GetParticipantID(db, "test_group", 1)
 	assert.NoError(t, err)
 	assert.Equal(t, pid, participantID)
-
-	// UpdateParticipantState
-	p.State = []byte("state2")
-	err = internal.UpdateParticipantState(db, p)
-	assert.NoError(t, err)
-
-	participants, err = internal.GetGroupParticipants(db, "test_group")
-	assert.NoError(t, err)
-	assert.Len(t, participants, 1)
-	assert.Equal(t, p.State, participants[0].State)
 }
 
 func TestCeremonyAndMessageFunctions(t *testing.T) {

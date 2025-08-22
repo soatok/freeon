@@ -19,8 +19,7 @@ func DbEnsureTablesExist(db *sql.DB) error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
         groupid INTEGER REFERENCES keygroups(id), 
 		uid TEXT NOT NULL,
-		partyid INTEGER,
-		state TEXT
+		partyid INTEGER
 	);
 	CREATE TABLE IF NOT EXISTS ceremonies (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,8 +34,7 @@ func DbEnsureTablesExist(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS players (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		ceremonyid INTEGER REFERENCES ceremonies(id),
-		participantid INTEGER REFERENCES participants(id),
-		state TEXT
+		participantid INTEGER REFERENCES participants(id)
 	);
 	CREATE TABLE IF NOT EXISTS keygenmsg (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,8 +129,7 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 			p.id,
 			g.id AS groupid,
 			p.uid,
-			p.partyid,
-			p.state
+			p.partyid
 		FROM keygroups g 
 		JOIN participants p ON p.groupid = g.id
 		WHERE g.uid = ?
@@ -153,12 +150,7 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 		var groupId int64
 		var uid string
 		var partyid uint16
-		var stateHex string
-		if err := rows.Scan(&dbId, &groupId, &uid, &partyid, &stateHex); err != nil {
-			return nil, err
-		}
-		state, err := hex.DecodeString(stateHex)
-		if err != nil {
+		if err := rows.Scan(&dbId, &groupId, &uid, &partyid); err != nil {
 			return nil, err
 		}
 		p := FreonParticipant{
@@ -166,7 +158,6 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 			GroupID: groupId,
 			Uid:     uid,
 			PartyID: partyid,
-			State:   state,
 		}
 		participants = append(participants, p)
 	}
@@ -280,7 +271,6 @@ func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 			x.id,
 			x.ceremonyid,
 			x.participantid,
-			x.state,
 			p.partyid
 		FROM players x 
 		JOIN participants p ON x.participantid = p.id
@@ -301,20 +291,14 @@ func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 		var dbId int64
 		var ceremonyId int64
 		var participantId int64
-		var stateHex string
 		var partyId uint16
-		if err := rows.Scan(&dbId, &ceremonyId, &participantId, &stateHex, &partyId); err != nil {
-			return nil, err
-		}
-		state, err := hex.DecodeString(stateHex)
-		if err != nil {
+		if err := rows.Scan(&dbId, &ceremonyId, &participantId, &partyId); err != nil {
 			return nil, err
 		}
 		p := FreonPlayers{
 			DbId:          dbId,
 			CeremonyID:    ceremonyId,
 			ParticipantID: participantId,
-			State:         state,
 			PartyID:       partyId,
 		}
 		players = append(players, p)
@@ -447,12 +431,11 @@ func InsertCeremony(db *sql.DB, c FreonCeremonies) (int64, error) {
 }
 
 func InsertParticipant(db *sql.DB, p FreonParticipant) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO participants (groupid, uid, partyid, state) VALUES (?, ?, ?, ?)`)
+	stmt, err := db.Prepare(`INSERT INTO participants (groupid, uid, partyid) VALUES (?, ?, ?)`)
 	if err != nil {
 		return 0, err
 	}
-	stateHex := hex.EncodeToString(p.State)
-	res, err := stmt.Exec(p.GroupID, p.Uid, p.PartyID, stateHex)
+	res, err := stmt.Exec(p.GroupID, p.Uid, p.PartyID)
 	if err != nil {
 		return 0, err
 	}
@@ -464,12 +447,11 @@ func InsertParticipant(db *sql.DB, p FreonParticipant) (int64, error) {
 }
 
 func InsertPlayer(db *sql.DB, p FreonPlayers) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO players (ceremonyid, participantid, state) VALUES (?, ?, ?)`)
+	stmt, err := db.Prepare(`INSERT INTO players (ceremonyid, participantid) VALUES (?, ?)`)
 	if err != nil {
 		return 0, err
 	}
-	stateHex := hex.EncodeToString(p.State)
-	res, err := stmt.Exec(p.CeremonyID, p.ParticipantID, stateHex)
+	res, err := stmt.Exec(p.CeremonyID, p.ParticipantID)
 	if err != nil {
 		return 0, err
 	}
@@ -512,20 +494,6 @@ func InsertSignMessage(db *sql.DB, m FreonSignMessage) (int64, error) {
 		return 0, err
 	}
 	return id, nil
-}
-
-// Allows the "state" of the participants in a key group to be updated
-func UpdateParticipantState(db *sql.DB, p FreonParticipant) error {
-	stmt, err := db.Prepare(`UPDATE participants SET state = ? WHERE id = ?`)
-	if err != nil {
-		return err
-	}
-	stateHex := hex.EncodeToString(p.State)
-	_, err = stmt.Exec(stateHex, p.DbId)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func FinalizeGroup(db *sql.DB, g FreonGroup) error {
