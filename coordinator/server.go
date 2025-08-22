@@ -435,5 +435,22 @@ func getSign(w http.ResponseWriter, r *http.Request) {
 }
 
 func terminateSign(w http.ResponseWriter, r *http.Request) {
-	// TODO - soatok
+	var req TerminateRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	err = internal.TerminateCeremony(db, req.CeremonyID)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	response := VapidResponse{
+		Status: "OK",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

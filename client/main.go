@@ -398,20 +398,37 @@ func FreonSignGet(args []string) {
 	internal.GetSignSignature(*ceremonyID, *host)
 }
 
-// CMD: `freon sign terminate ...`
+// CMD: `freon terminate ...`
 func FreonTerminate(args []string) {
 	// Parse CLI arguments:
-	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
+	fs := flag.NewFlagSet("terminate", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", terminateUsage) }
 	ceremonyID := fs.String("c", "", "Ceremony ID")
 	ceremonyIDLong := fs.String("ceremony", "", "Ceremony ID")
+	host := fs.String("h", "", "Coordinator hostname:port")
+	hostLong := fs.String("host", "", "Coordinator hostname:port")
 	fs.Parse(args)
 
 	// Merge short/long flags
 	if *ceremonyIDLong != "" {
 		*ceremonyID = *ceremonyIDLong
 	}
+	if *hostLong != "" {
+		*host = *hostLong
+	}
+
+	// Input validation
+	if *host == "" {
+		fmt.Fprintf(os.Stderr, "Error: -h/--host is required\n")
+		fs.Usage()
+		os.Exit(1)
+	}
+	if *ceremonyID == "" {
+		fmt.Fprintf(os.Stderr, "Error: -c/--ceremony is required\n")
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	// The actual logic is implemented here:
-	internal.TerminateSignCeremony(*ceremonyID)
+	internal.TerminateSignCeremony(*host, *ceremonyID)
 }

@@ -114,6 +114,10 @@ type GetSignResponse struct {
 	Signature string `json:"signature"`
 }
 
+type TerminateRequest struct {
+	CeremonyID string `json:"ceremony-id"`
+}
+
 type VapidResponse struct {
 	Status string `json:"status"`
 }

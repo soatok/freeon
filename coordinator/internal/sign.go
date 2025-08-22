@@ -36,6 +36,9 @@ func JoinSignCeremony(db *sql.DB, ceremonyID, hash string, myPartyID uint16) (in
 	if err != nil {
 		return 0, err
 	}
+	if !ceremonyData.Active {
+		return 0, errors.New("ceremony is not active or does not exist")
+	}
 
 	stmt, err := db.Prepare(`
 		SELECT par.id
@@ -104,6 +107,9 @@ func AddSignMessage(db *sql.DB, ceremonyUid string, myPartyID uint16, message []
 	if err != nil {
 		return FreonSignMessage{}, err
 	}
+	if !ceremony.Active {
+		return FreonSignMessage{}, errors.New("ceremony is not active or does not exist")
+	}
 
 	group, err := GetGroupByID(db, ceremony.GroupID)
 	if err != nil {
@@ -134,6 +140,9 @@ func SetSignature(db *sql.DB, ceremonyUid, sig string) error {
 		return err
 	}
 
+	if !ceremony.Active {
+		return errors.New("ceremony is not active or does not exist")
+	}
 	if ceremony.Signature != nil {
 		return errors.New("signature is already defined")
 	}
