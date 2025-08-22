@@ -106,16 +106,17 @@ func GetGroupByID(db *sql.DB, groupID int64) (FreonGroup, error) {
 	}
 	defer stmt.Close()
 
+	var id int64
 	var uid string
 	var threshold uint16
 	var participants uint16
 	var publicKey *string
-	err = stmt.QueryRow(groupID).Scan(&uid, &threshold, &participants, &publicKey)
+	err = stmt.QueryRow(groupID).Scan(&id, &uid, &threshold, &participants, &publicKey)
 	if err != nil {
 		return FreonGroup{}, err
 	}
 	return FreonGroup{
-		DbId:         groupID,
+		DbId:         id,
 		Uid:          uid,
 		Participants: participants,
 		Threshold:    threshold,
@@ -134,7 +135,7 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 			p.state
 		FROM keygroups g 
 		JOIN participants p ON p.groupid = g.id
-		WHERE group.uid = ?
+		WHERE g.uid = ?
 	`)
 	if err != nil {
 		return nil, err
@@ -185,7 +186,7 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 	defer stmt.Close()
 
 	var id int64
-	err = stmt.QueryRow(groupUid).Scan(&id)
+	err = stmt.QueryRow(groupUid, myPartyID).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -246,7 +247,7 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 	for rows.Next() {
 		var ceremonyID string
 		var hash string
-		var signature string
+		var signature *string
 		var openssh bool
 		var opensshnamespace string
 		var active bool
@@ -257,7 +258,7 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 			Uid:              ceremonyID,
 			Active:           active,
 			Hash:             hash,
-			Signature:        &signature,
+			Signature:        signature,
 			OpenSSH:          openssh,
 			OpenSSHNamespace: opensshnamespace,
 		}
@@ -368,7 +369,7 @@ func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]Fre
 			msg.sender,
 			msg.message
 		FROM ceremonies c
-		JOIN signmsg msg ON msg.groupid = g.id
+		JOIN signmsg msg ON msg.ceremonyid = c.id
 		JOIN participants p ON msg.sender = p.id
 		WHERE c.uid = ? AND msg.id > ?
 	`)

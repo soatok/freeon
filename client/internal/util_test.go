@@ -113,3 +113,21 @@ func TestPartyToUint16(t *testing.T) {
 	slice := internal.PartyToUint16(party)
 	assert.Equal(t, []uint16{5, 6, 7}, slice)
 }
+
+func TestHexBEToUint16(t *testing.T) {
+	val, err := internal.HexBEToUint16("0100")
+	assert.NoError(t, err)
+	assert.Equal(t, uint16(256), val)
+
+	val, err = internal.HexBEToUint16("ffff")
+	assert.NoError(t, err)
+	assert.Equal(t, uint16(65535), val)
+}
+
+func TestUint16ToHexBE(t *testing.T) {
+	hex := internal.Uint16ToHexBE(256)
+	assert.Equal(t, "0100", hex)
+
+	hex = internal.Uint16ToHexBE(65535)
+	assert.Equal(t, "ffff", hex)
+}

@@ -20,12 +20,12 @@ func HashMessageForSanity(data []byte, groupID string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-func uint16ToHexBE(n uint16) string {
+func Uint16ToHexBE(n uint16) string {
 	bytes := []byte{byte(n >> 8), byte(n)}
 	return hex.EncodeToString(bytes)
 }
 
-func hexBEToUint16(s string) (uint16, error) {
+func HexBEToUint16(s string) (uint16, error) {
 	bytes, err := hex.DecodeString(s)
 	if err != nil {
 		return 0, err
