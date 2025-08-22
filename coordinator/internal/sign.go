@@ -71,7 +71,6 @@ func JoinSignCeremony(db *sql.DB, ceremonyID, hash string, myPartyID uint16) (in
 func PollSignCeremony(db *sql.DB, ceremonyID string, myPartyID uint16) (PollSignResponse, error) {
 	ceremonyData, err := GetCeremonyData(db, ceremonyID)
 	if err != nil {
-		panic(err)
 		return PollSignResponse{}, err
 	}
 
@@ -140,4 +139,15 @@ func SetSignature(db *sql.DB, ceremonyUid, sig string) error {
 	}
 
 	return FinalizeSignature(db, ceremony, sig)
+}
+
+func GetSignature(db *sql.DB, ceremonyUid string) (string, error) {
+	ceremony, err := GetCeremonyData(db, ceremonyUid)
+	if err != nil {
+		return "", err
+	}
+	if ceremony.Signature != nil {
+		return *ceremony.Signature, nil
+	}
+	return "", errors.New("signature not found")
 }

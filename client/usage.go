@@ -178,6 +178,26 @@ EXAMPLES:
 
 `
 
+const signGetUsage = `FREON SIGN GET - Get signature from coordinator
+
+USAGE:
+    freon sign get [OPTIONS] -c <CEREMONY_ID>
+
+DESCRIPTION:
+    Query the coordinator for the final signature for a concluded
+    ceremony.
+
+OPTIONS:
+    -c, --ceremony <CEREMONY_ID>    Ceremony ID from sign create
+    -h, --host <HOST>               Coordinator hostname:port
+        --help                      Print help information
+
+EXAMPLES:
+    freon sign get -c cer_def456
+    freon sign get -h coord.example.com:8080 -c cer_def456 message.txt
+
+`
+
 const terminateUsage = `FREON TERMINATE - Terminate ceremonies
 
 USAGE:

@@ -13,6 +13,9 @@ type CoordinatorConfig struct {
 }
 
 func getConfigFile() (string, error) {
+	if path := os.Getenv("FREON_COORDINATOR_CONFIG"); path != "" {
+		return path, nil
+	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

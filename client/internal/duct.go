@@ -62,6 +62,8 @@ func GetApiEndpoint(host string, feature string) (string, error) {
 		u.Path = "/sign/send"
 	case "FinalizeSignMessage":
 		u.Path = "/sign/finalize"
+	case "GetSignature":
+		u.Path = "/sign/get"
 	case "TerminateSignCeremony":
 		u.Path = "/sign/terminate"
 	default:
@@ -323,4 +325,28 @@ func DuctSignFinalize(host string, req SignFinalRequest) error {
 	}
 	_, err = httpClient.Post(uri, "application/json", bytes.NewReader(body))
 	return err
+}
+
+func DuctGetSignature(host string, req GetSignRequest) (GetSignResponse, error) {
+	err := InitializeHttpClient()
+	if err != nil {
+		return GetSignResponse{}, err
+	}
+	uri, err := GetApiEndpoint(host, "GetSignature")
+	if err != nil {
+		return GetSignResponse{}, err
+	}
+	body, _ := json.Marshal(req)
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return GetSignResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	var response GetSignResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return GetSignResponse{}, err
+	}
+	return response, nil
 }

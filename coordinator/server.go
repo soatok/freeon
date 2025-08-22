@@ -64,6 +64,7 @@ func main() {
 	http.HandleFunc("/sign/poll", pollSign)
 	http.HandleFunc("/sign/send", sendSign)
 	http.HandleFunc("/sign/finalize", finalizeSign)
+	http.HandleFunc("/sign/get", getSign)
 
 	http.HandleFunc("/terminate", terminateSign)
 	http.ListenAndServe(serverConfig.Hostname, sessionManager.LoadAndSave(mux))
@@ -408,6 +409,26 @@ func listSign(w http.ResponseWriter, r *http.Request) {
 	// Return a vapid response.
 	response := ListSignResponse{
 		Ceremonies: list,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func getSign(w http.ResponseWriter, r *http.Request) {
+	var req GetSignRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+	signature, err := internal.GetSignature(db, req.CeremonyID)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	response := GetSignResponse{
+		Signature: signature,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
