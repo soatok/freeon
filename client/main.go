@@ -19,6 +19,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	flag.Parse()
 	args := flag.Args()
 	if len(args) == 0 {
 		flag.Usage()
