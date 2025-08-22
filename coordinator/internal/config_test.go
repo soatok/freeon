@@ -12,6 +12,8 @@ import (
 func TestServerConfig(t *testing.T) {
 	tempDir := t.TempDir()
 	t.Setenv("HOME", tempDir)
+	// Windows uses this environment variable instead
+	t.Setenv("USERPROFILE", tempDir)
 	os.Mkdir(tempDir, 0700)
 
 	// Test NewServerConfig

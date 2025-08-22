@@ -195,7 +195,8 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 
 func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	stmt, err := db.Prepare(`SELECT
-		id, groupid, active, hash, signature, openssh, opensshnamespace FROM ceremonies 
+		id, groupid, active, hash, signature, openssh, opensshnamespace
+		FROM ceremonies
 		WHERE uid = ?`)
 	if err != nil {
 		return FreonCeremonies{}, err
@@ -208,8 +209,8 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	var hash string
 	var signature *string
 	var openssh bool
-	var opensshnamespace string
-	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature, &openssh, &opensshnamespace)
+	var opensshnamespace *string
+	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &hash, &signature, &openssh, &opensshnamespace)
 	if err != nil {
 		return FreonCeremonies{}, err
 	}
@@ -249,10 +250,16 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 		var hash string
 		var signature *string
 		var openssh bool
-		var opensshnamespace string
+		var opensshnamespace *string
 		var active bool
 		if err := rows.Scan(&ceremonyID, &hash, &signature, &openssh, &opensshnamespace, &active); err != nil {
 			return nil, err
+		}
+		var ns string
+		if opensshnamespace == nil {
+			ns = ""
+		} else {
+			ns = *opensshnamespace
 		}
 		row := FreonCeremonySummary{
 			Uid:              ceremonyID,
@@ -260,7 +267,7 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 			Hash:             hash,
 			Signature:        signature,
 			OpenSSH:          openssh,
-			OpenSSHNamespace: opensshnamespace,
+			OpenSSHNamespace: ns,
 		}
 		results = append(results, row)
 	}

@@ -31,7 +31,7 @@ type FreonCeremonies struct {
 	Hash             string
 	Signature        *string
 	OpenSSH          bool
-	OpenSSHNamespace string
+	OpenSSHNamespace *string
 }
 
 // For public lists of signing ceremonies
