@@ -29,3 +29,9 @@ jobs:
 
     - name: Test Coordinator
       run: cd coordinator && go test -v -short && cd ..
+
+    - name: Test Client Internal
+      run: cd client/internal && go test -v -short && cd ../..
+
+    - name: Test Coordinator Internal
+      run: cd coordinator/internal && go test -v -short && cd ..
