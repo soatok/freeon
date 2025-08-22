@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
-	_ "github.com/mattn/go-sqlite3" // SQLite driver
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/soatok/freon/coordinator/internal"
 	_ "github.com/taurusgroup/frost-ed25519/pkg/frost"
 )

@@ -2,6 +2,8 @@
 
 > FOSS Resists Executive Overreaching Nations
 
+[![Build Status](https://github.com/soatok/freon/actions/workflows/ci.yml/badge.svg)](https://github.com/soatok/freon/actions/workflows/ci.yml)
+
 FREON implements FROST ([RFC 9591](https://www.rfc-editor.org/rfc/rfc9591.html)) to allow geographically distributed teams produce digital signatures.
 
 Each share of the signing key is encrypted locally using [age](https://github.com/FiloSottile/age).
@@ -44,7 +46,7 @@ go install
 ```terminal
 git clone https://github.com/soatok/freon.git
 cd freon
-CGO_ENABLED=1 go build -o coordinator ./coordinator
+go build -o coordinator ./coordinator
 ./coordinator
 ```
 

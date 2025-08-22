@@ -55,12 +55,23 @@ func JoinSignCeremony(db *sql.DB, ceremonyID, hash string, myPartyID uint16) (in
 	if subtle.ConstantTimeCompare([]byte(ceremonyData.Hash), []byte(hash)) != 1 {
 		return 0, errors.New("hash mismatch")
 	}
+
+	// Now insert the player
+	insert, err := db.Prepare(`INSERT INTO players (ceremonyid, participantid) VALUES (?, ?)`)
+	if err != nil {
+		return 0, err
+	}
+	_, err = insert.Exec(ceremonyData.DbId, participantId)
+	if err != nil {
+		return 0, err
+	}
 	return participantId, nil
 }
 
 func PollSignCeremony(db *sql.DB, ceremonyID string, myPartyID uint16) (PollSignResponse, error) {
 	ceremonyData, err := GetCeremonyData(db, ceremonyID)
 	if err != nil {
+		panic(err)
 		return PollSignResponse{}, err
 	}
 

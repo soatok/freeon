@@ -360,7 +360,6 @@ func FreonSignList(args []string) {
 		fs.Usage()
 		os.Exit(1)
 	}
-
 	internal.ListSign(*host, *groupID, *limit, *offset)
 }
 

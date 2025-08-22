@@ -1,0 +1,31 @@
+name: Go Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.25'
+
+    - name: Build Client
+      run: go build -o ./freon -v ./client
+      
+    - name: Build Coordinator
+      run: go build -o ./freon-server -v ./coordinator
+
+    - name: Test Client
+      run: cd client && go test -v -short && cd ..
+
+    - name: Test Coordinator
+      run: cd coordinator && go test -v -short && cd ..

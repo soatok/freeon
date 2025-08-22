@@ -277,7 +277,7 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 	// Let's build the list of public shares
 	publicShares := make(map[string]string)
 	for index, sh := range public.Shares {
-		i := uint16ToHexBE(uint16(index))
+		i := Uint16ToHexBE(uint16(index))
 		shh := hex.EncodeToString(sh.BytesEd25519())
 		publicShares[i] = shh
 	}
@@ -405,7 +405,7 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	// Let's deserialize the public shares
 	publicShares := make(map[party.ID]*ristretto.Element, len(publicSharesHex))
 	for k, v := range publicSharesHex {
-		p16, err := hexBEToUint16(k)
+		p16, err := HexBEToUint16(k)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s", err.Error())
 			os.Exit(1)

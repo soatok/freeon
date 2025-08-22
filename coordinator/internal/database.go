@@ -19,8 +19,7 @@ func DbEnsureTablesExist(db *sql.DB) error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
         groupid INTEGER REFERENCES keygroups(id), 
 		uid TEXT NOT NULL,
-		partyid INTEGER,
-		state TEXT
+		partyid INTEGER
 	);
 	CREATE TABLE IF NOT EXISTS ceremonies (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,8 +34,7 @@ func DbEnsureTablesExist(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS players (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		ceremonyid INTEGER REFERENCES ceremonies(id),
-		participantid INTEGER REFERENCES participants(id),
-		state TEXT
+		participantid INTEGER REFERENCES participants(id)
 	);
 	CREATE TABLE IF NOT EXISTS keygenmsg (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,16 +104,17 @@ func GetGroupByID(db *sql.DB, groupID int64) (FreonGroup, error) {
 	}
 	defer stmt.Close()
 
+	var id int64
 	var uid string
 	var threshold uint16
 	var participants uint16
 	var publicKey *string
-	err = stmt.QueryRow(groupID).Scan(&uid, &threshold, &participants, &publicKey)
+	err = stmt.QueryRow(groupID).Scan(&id, &uid, &threshold, &participants, &publicKey)
 	if err != nil {
 		return FreonGroup{}, err
 	}
 	return FreonGroup{
-		DbId:         groupID,
+		DbId:         id,
 		Uid:          uid,
 		Participants: participants,
 		Threshold:    threshold,
@@ -130,11 +129,10 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 			p.id,
 			g.id AS groupid,
 			p.uid,
-			p.partyid,
-			p.state
+			p.partyid
 		FROM keygroups g 
 		JOIN participants p ON p.groupid = g.id
-		WHERE group.uid = ?
+		WHERE g.uid = ?
 	`)
 	if err != nil {
 		return nil, err
@@ -152,12 +150,7 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 		var groupId int64
 		var uid string
 		var partyid uint16
-		var stateHex string
-		if err := rows.Scan(&dbId, &groupId, &uid, &partyid, &stateHex); err != nil {
-			return nil, err
-		}
-		state, err := hex.DecodeString(stateHex)
-		if err != nil {
+		if err := rows.Scan(&dbId, &groupId, &uid, &partyid); err != nil {
 			return nil, err
 		}
 		p := FreonParticipant{
@@ -165,7 +158,6 @@ func GetGroupParticipants(db *sql.DB, groupUid string) ([]FreonParticipant, erro
 			GroupID: groupId,
 			Uid:     uid,
 			PartyID: partyid,
-			State:   state,
 		}
 		participants = append(participants, p)
 	}
@@ -185,7 +177,7 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 	defer stmt.Close()
 
 	var id int64
-	err = stmt.QueryRow(groupUid).Scan(&id)
+	err = stmt.QueryRow(groupUid, myPartyID).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -194,7 +186,8 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 
 func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	stmt, err := db.Prepare(`SELECT
-		id, groupid, active, hash, signature, openssh, opensshnamespace FROM ceremonies 
+		id, groupid, active, hash, signature, openssh, opensshnamespace
+		FROM ceremonies
 		WHERE uid = ?`)
 	if err != nil {
 		return FreonCeremonies{}, err
@@ -207,8 +200,8 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	var hash string
 	var signature *string
 	var openssh bool
-	var opensshnamespace string
-	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &signature, &openssh, &opensshnamespace)
+	var opensshnamespace *string
+	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &hash, &signature, &openssh, &opensshnamespace)
 	if err != nil {
 		return FreonCeremonies{}, err
 	}
@@ -246,20 +239,26 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 	for rows.Next() {
 		var ceremonyID string
 		var hash string
-		var signature string
+		var signature *string
 		var openssh bool
-		var opensshnamespace string
+		var opensshnamespace *string
 		var active bool
 		if err := rows.Scan(&ceremonyID, &hash, &signature, &openssh, &opensshnamespace, &active); err != nil {
 			return nil, err
+		}
+		var ns string
+		if opensshnamespace == nil {
+			ns = ""
+		} else {
+			ns = *opensshnamespace
 		}
 		row := FreonCeremonySummary{
 			Uid:              ceremonyID,
 			Active:           active,
 			Hash:             hash,
-			Signature:        &signature,
+			Signature:        signature,
 			OpenSSH:          openssh,
-			OpenSSHNamespace: opensshnamespace,
+			OpenSSHNamespace: ns,
 		}
 		results = append(results, row)
 	}
@@ -272,7 +271,6 @@ func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 			x.id,
 			x.ceremonyid,
 			x.participantid,
-			x.state,
 			p.partyid
 		FROM players x 
 		JOIN participants p ON x.participantid = p.id
@@ -293,20 +291,14 @@ func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 		var dbId int64
 		var ceremonyId int64
 		var participantId int64
-		var stateHex string
 		var partyId uint16
-		if err := rows.Scan(&dbId, &ceremonyId, &participantId, &stateHex, &partyId); err != nil {
-			return nil, err
-		}
-		state, err := hex.DecodeString(stateHex)
-		if err != nil {
+		if err := rows.Scan(&dbId, &ceremonyId, &participantId, &partyId); err != nil {
 			return nil, err
 		}
 		p := FreonPlayers{
 			DbId:          dbId,
 			CeremonyID:    ceremonyId,
 			ParticipantID: participantId,
-			State:         state,
 			PartyID:       partyId,
 		}
 		players = append(players, p)
@@ -368,7 +360,7 @@ func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]Fre
 			msg.sender,
 			msg.message
 		FROM ceremonies c
-		JOIN signmsg msg ON msg.groupid = g.id
+		JOIN signmsg msg ON msg.ceremonyid = c.id
 		JOIN participants p ON msg.sender = p.id
 		WHERE c.uid = ? AND msg.id > ?
 	`)
@@ -439,12 +431,11 @@ func InsertCeremony(db *sql.DB, c FreonCeremonies) (int64, error) {
 }
 
 func InsertParticipant(db *sql.DB, p FreonParticipant) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO participants (groupid, uid, partyid, state) VALUES (?, ?, ?, ?)`)
+	stmt, err := db.Prepare(`INSERT INTO participants (groupid, uid, partyid) VALUES (?, ?, ?)`)
 	if err != nil {
 		return 0, err
 	}
-	stateHex := hex.EncodeToString(p.State)
-	res, err := stmt.Exec(p.GroupID, p.Uid, p.PartyID, stateHex)
+	res, err := stmt.Exec(p.GroupID, p.Uid, p.PartyID)
 	if err != nil {
 		return 0, err
 	}
@@ -456,12 +447,11 @@ func InsertParticipant(db *sql.DB, p FreonParticipant) (int64, error) {
 }
 
 func InsertPlayer(db *sql.DB, p FreonPlayers) (int64, error) {
-	stmt, err := db.Prepare(`INSERT INTO players (ceremonyid, participantid, state) VALUES (?, ?, ?)`)
+	stmt, err := db.Prepare(`INSERT INTO players (ceremonyid, participantid) VALUES (?, ?)`)
 	if err != nil {
 		return 0, err
 	}
-	stateHex := hex.EncodeToString(p.State)
-	res, err := stmt.Exec(p.CeremonyID, p.ParticipantID, stateHex)
+	res, err := stmt.Exec(p.CeremonyID, p.ParticipantID)
 	if err != nil {
 		return 0, err
 	}
@@ -504,20 +494,6 @@ func InsertSignMessage(db *sql.DB, m FreonSignMessage) (int64, error) {
 		return 0, err
 	}
 	return id, nil
-}
-
-// Allows the "state" of the participants in a key group to be updated
-func UpdateParticipantState(db *sql.DB, p FreonParticipant) error {
-	stmt, err := db.Prepare(`UPDATE participants SET state = ? WHERE id = ?`)
-	if err != nil {
-		return err
-	}
-	stateHex := hex.EncodeToString(p.State)
-	_, err = stmt.Exec(stateHex, p.DbId)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func FinalizeGroup(db *sql.DB, g FreonGroup) error {

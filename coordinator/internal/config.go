@@ -22,13 +22,13 @@ func getConfigFile() (string, error) {
 
 // Default user config
 func NewServerConfig() (CoordinatorConfig, error) {
-	config := CoordinatorConfig{}
+	config := CoordinatorConfig{
+		Hostname: "localhost:8462",
+		Database: "./database.sqlite",
+	}
 	err := config.Save()
 	if err != nil {
-		return CoordinatorConfig{
-			Hostname: "localhost:8462",
-			Database: "./database.sqlite",
-		}, err
+		return CoordinatorConfig{}, err
 	}
 	return config, nil
 }
