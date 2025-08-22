@@ -536,6 +536,20 @@ func ListSign(host, groupID string, limit, offset int64) {
 	os.Exit(0)
 }
 
+// Fetch a signature from the coordinator for a given ceremony
+func GetSignSignature(ceremonyID, host string) {
+	req := GetSignRequest{
+		CeremonyID: ceremonyID,
+	}
+	res, err := DuctGetSignature(host, req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		os.Exit(1)
+	}
+	fmt.Printf("Signature:\n%s\n", res.Signature)
+	os.Exit(0)
+}
+
 func TerminateSignCeremony(ceremonyID string) {
 	// TODO - soatok
 }
