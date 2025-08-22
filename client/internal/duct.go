@@ -310,7 +310,7 @@ func DuctSignList(host string, req ListSignRequest) (ListSignResponse, error) {
 }
 
 // Get keygen protocol messages
-func DuctKeygenGetMessages(host string, groupID string, lastSeen int64) (KeyGenMessageResponse, error) {
+func DuctKeygenGetMessages(host string, groupID string, myPartyID uint16, lastSeen int64) (KeyGenMessageResponse, error) {
 	err := InitializeHttpClient()
 	if err != nil {
 		return KeyGenMessageResponse{}, err
@@ -320,8 +320,9 @@ func DuctKeygenGetMessages(host string, groupID string, lastSeen int64) (KeyGenM
 		return KeyGenMessageResponse{}, err
 	}
 	req := KeyGenMessageRequest{
-		GroupID:  groupID,
-		LastSeen: lastSeen,
+		GroupID:   groupID,
+		MyPartyID: myPartyID,
+		LastSeen:  lastSeen,
 	}
 	body, _ := json.Marshal(req)
 	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
@@ -338,7 +339,10 @@ func DuctKeygenGetMessages(host string, groupID string, lastSeen int64) (KeyGenM
 		return KeyGenMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 	var response KeyGenMessageResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return KeyGenMessageResponse{}, err
+	}
 	return response, nil
 }
 
@@ -367,12 +371,15 @@ func DuctKeygenProtocolMessage(host string, req KeyGenMessageRequest) (KeyGenMes
 		return KeyGenMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 	var response KeyGenMessageResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return KeyGenMessageResponse{}, err
+	}
 	return response, nil
 }
 
 // Get sign protocol messages
-func DuctSignGetMessages(host string, ceremonyID string, lastSeen int64) (SignMessageResponse, error) {
+func DuctSignGetMessages(host string, ceremonyID string, myPartyID uint16, lastSeen int64) (SignMessageResponse, error) {
 	err := InitializeHttpClient()
 	if err != nil {
 		return SignMessageResponse{}, err
@@ -383,6 +390,7 @@ func DuctSignGetMessages(host string, ceremonyID string, lastSeen int64) (SignMe
 	}
 	req := SignMessageRequest{
 		CeremonyID: ceremonyID,
+		MyPartyID:  myPartyID,
 		LastSeen:   lastSeen,
 	}
 	body, _ := json.Marshal(req)
@@ -400,7 +408,10 @@ func DuctSignGetMessages(host string, ceremonyID string, lastSeen int64) (SignMe
 		return SignMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 	var response SignMessageResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return SignMessageResponse{}, err
+	}
 	return response, nil
 }
 
@@ -429,7 +440,10 @@ func DuctSignProtocolMessage(host string, req SignMessageRequest) (SignMessageRe
 		return SignMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 	var response SignMessageResponse
-	json.NewDecoder(resp.Body).Decode(&response)
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return SignMessageResponse{}, err
+	}
 	return response, nil
 }
 

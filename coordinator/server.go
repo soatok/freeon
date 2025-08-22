@@ -188,22 +188,22 @@ func getKeygenMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Get a new maximum
-	var max = req.LastSeen
+	var latestID = req.LastSeen
 	var messages []string
 	for _, m := range inbox {
-		if m.DbId >= max {
-			max = m.DbId
-		}
 		messages = append(messages, hex.EncodeToString(m.Message))
+		if m.DbId > latestID {
+			latestID = m.DbId
+		}
 	}
 
 	// Let's queue up the messages
 	response := KeyGenMessageResponse{
-		LatestMessageID: max,
+		LatestMessageID: latestID,
 		Messages:        messages,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(&response)
 }
 
 // Send a message to participate in a keygen ceremony
@@ -219,39 +219,38 @@ func sendKeygen(w http.ResponseWriter, r *http.Request) {
 		sendError(w, err)
 		return
 	}
+
+	// First, add the new message to the database.
+	_, err = internal.AddKeyGenMessage(db, req.GroupID, req.MyPartyID, msg)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// Now, get all messages since the client's last seen ID.
+	// This will include the message we just added, and any from other clients.
 	inbox, err := internal.GetKeygenMessagesSince(db, req.GroupID, req.LastSeen)
 	if err != nil {
 		sendError(w, err)
 		return
 	}
-	// Get a new maximum
-	var max = req.LastSeen
+
+	// Build the response
+	var latestID = req.LastSeen
 	var messages []string
 	for _, m := range inbox {
-		if m.DbId >= max {
-			max = m.DbId
-		}
 		messages = append(messages, hex.EncodeToString(m.Message))
+		if m.DbId > latestID {
+			latestID = m.DbId
+		}
 	}
 
-	record, err := internal.AddKeyGenMessage(db, req.GroupID, req.MyPartyID, msg)
-	if err != nil {
-		sendError(w, err)
-		return
-	}
-
-	// If no other inserts occured, we can do this
-	if record.DbId-max == 1 {
-		max = record.DbId
-	}
-
-	// Let's queue up the messages
 	response := KeyGenMessageResponse{
-		LatestMessageID: max,
+		LatestMessageID: latestID,
 		Messages:        messages,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(&response)
 }
 
 // Create a signing ceremony
@@ -304,14 +303,18 @@ func pollSign(w http.ResponseWriter, r *http.Request) {
 		sendError(w, err)
 		return
 	}
-	response, err := internal.PollSignCeremony(db, req.CeremonyID, *req.PartyID)
+	var partyID uint16 = 0
+	if req.PartyID != nil {
+		partyID = *req.PartyID
+	}
+	response, err := internal.PollSignCeremony(db, req.CeremonyID, partyID)
 	if err != nil {
 		sendError(w, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(&response)
 
 }
 
@@ -360,39 +363,37 @@ func sendSign(w http.ResponseWriter, r *http.Request) {
 		sendError(w, err)
 		return
 	}
+
+	// First, add the new message to the database.
+	_, err = internal.AddSignMessage(db, req.CeremonyID, req.MyPartyID, msg)
+	if err != nil {
+		sendError(w, err)
+		return
+	}
+
+	// Now, get all messages since the client's last seen ID.
 	inbox, err := internal.GetSignMessagesSince(db, req.CeremonyID, req.LastSeen)
 	if err != nil {
 		sendError(w, err)
 		return
 	}
-	// Get a new maximum
-	var max = req.LastSeen
+
+	// Build the response
+	var latestID = req.LastSeen
 	var messages []string
 	for _, m := range inbox {
-		if m.DbId >= max {
-			max = m.DbId
-		}
 		messages = append(messages, hex.EncodeToString(m.Message))
+		if m.DbId > latestID {
+			latestID = m.DbId
+		}
 	}
 
-	record, err := internal.AddSignMessage(db, req.CeremonyID, req.MyPartyID, msg)
-	if err != nil {
-		sendError(w, err)
-		return
-	}
-
-	// If no other inserts occured, we can do this
-	if record.DbId-max == 1 {
-		max = record.DbId
-	}
-
-	// Let's queue up the messages
-	response := KeyGenMessageResponse{
-		LatestMessageID: max,
+	response := SignMessageResponse{
+		LatestMessageID: latestID,
 		Messages:        messages,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(&response)
 }
 
 // Store the final public key for the group
