@@ -71,9 +71,10 @@ func TestPollSignCeremony(t *testing.T) {
 	poll, err := internal.PollSignCeremony(db, c_uid, p1.PartyID)
 	assert.NoError(t, err)
 	assert.Equal(t, g_uid, poll.GroupID)
-	// This is not correct, JoinSignCeremony does not add players
-	// assert.Len(t, poll.OtherParties, 1)
-	// assert.Equal(t, p2.PartyID, poll.OtherParties[0])
+
+	// Ensure party 1 sees party 2
+	assert.Len(t, poll.OtherParties, 1)
+	assert.Equal(t, p2.PartyID, poll.OtherParties[0])
 }
 
 func TestAddSignMessage(t *testing.T) {
