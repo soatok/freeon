@@ -283,7 +283,7 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 	}
 
 	// Okay, finally, we add the share data to the local config
-	err = config.AddShare(host, groupID, groupKey, secretShare, publicShares)
+	err = config.AddShare(host, groupID, uint16(myPartyID), groupKey, secretShare, publicShares)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
 		os.Exit(1)

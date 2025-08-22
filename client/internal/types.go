@@ -4,6 +4,7 @@ package internal
 type Shares struct {
 	Host           string            `json:"host"`
 	GroupID        string            `json:"group-id"`
+	PartyID        uint16            `json:"party-id"`
 	PublicKey      string            `json:"public-key"`
 	EncryptedShare string            `json:"encrypted-share"`
 	PublicShares   map[string]string `json:"public-shares"`
