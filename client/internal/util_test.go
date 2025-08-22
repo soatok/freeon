@@ -7,6 +7,7 @@ import (
 
 	"github.com/soatok/freon/client/internal"
 	"github.com/stretchr/testify/assert"
+	"github.com/taurusgroup/frost-ed25519/pkg/frost/party"
 )
 
 func TestHashMessageForSanity(t *testing.T) {
@@ -87,4 +88,28 @@ func TestAmIElected(t *testing.T) {
 		}
 		assert.Equal(t, res, tt.Elected)
 	}
+}
+
+func TestUniqueID(t *testing.T) {
+	id1, err := internal.UniqueID()
+	assert.NoError(t, err)
+	assert.Len(t, id1, 48)
+
+	id2, err := internal.UniqueID()
+	assert.NoError(t, err)
+	assert.Len(t, id2, 48)
+
+	assert.NotEqual(t, id1, id2)
+}
+
+func TestSelectIndex(t *testing.T) {
+	hash := sha512.Sum384([]byte("freon testing"))
+	index := internal.SelectIndex(hash[:], 8)
+	assert.Equal(t, uint64(4), index)
+}
+
+func TestPartyToUint16(t *testing.T) {
+	party := party.IDSlice{5, 7, 6}
+	slice := internal.PartyToUint16(party)
+	assert.Equal(t, []uint16{5, 6, 7}, slice)
 }
