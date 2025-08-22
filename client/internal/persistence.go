@@ -7,7 +7,14 @@ import (
 )
 
 func getConfigFile() (string, error) {
-	homeDir, err := os.UserHomeDir()
+	homeDir := os.Getenv("FREON_HOME")
+	var err error
+	if homeDir == "" {
+		homeDir, err = os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+	}
 	if err != nil {
 		return "", err
 	}
