@@ -19,12 +19,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	flag.Parse()
-	args := flag.Args()
-	if len(args) == 0 {
-		flag.Usage()
-		os.Exit(1)
-	}
+	args := os.Args[1:]
 
 	// This is where commands are processed.
 	// Note that the first verb after `freon` is case insensitive.
@@ -290,7 +285,7 @@ func FreonSignCreate(args []string) {
 	}
 
 	// The actual logic is implemented here:
-	internal.InitSignCeremony(*groupID, *host, message, *openssh, *namespace)
+	internal.InitSignCeremony(*host, *groupID, message, *openssh, *namespace)
 }
 
 // CMD: `freon sign join ...`

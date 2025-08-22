@@ -52,6 +52,8 @@ func GetApiEndpoint(host string, feature string) (string, error) {
 		u.Path = "/keygen/poll"
 	case "SendKeygenMessage":
 		u.Path = "/keygen/send"
+	case "GetKeygenMessages":
+		u.Path = "/keygen/get-messages"
 	case "FinalizeKeygenMessage":
 		u.Path = "/keygen/finalize"
 	case "InitSignCeremony":
@@ -64,6 +66,8 @@ func GetApiEndpoint(host string, feature string) (string, error) {
 		u.Path = "/sign/list"
 	case "SendSignMessage":
 		u.Path = "/sign/send"
+	case "GetSignMessages":
+		u.Path = "/sign/get-messages"
 	case "FinalizeSignMessage":
 		u.Path = "/sign/finalize"
 	case "GetSignature":
@@ -305,6 +309,39 @@ func DuctSignList(host string, req ListSignRequest) (ListSignResponse, error) {
 	return response, nil
 }
 
+// Get keygen protocol messages
+func DuctKeygenGetMessages(host string, groupID string, lastSeen int64) (KeyGenMessageResponse, error) {
+	err := InitializeHttpClient()
+	if err != nil {
+		return KeyGenMessageResponse{}, err
+	}
+	uri, err := GetApiEndpoint(host, "GetKeygenMessages")
+	if err != nil {
+		return KeyGenMessageResponse{}, err
+	}
+	req := KeyGenMessageRequest{
+		GroupID:  groupID,
+		LastSeen: lastSeen,
+	}
+	body, _ := json.Marshal(req)
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return KeyGenMessageResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return KeyGenMessageResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return KeyGenMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+	var response KeyGenMessageResponse
+	json.NewDecoder(resp.Body).Decode(&response)
+	return response, nil
+}
+
 // Send keygen protocol messages
 func DuctKeygenProtocolMessage(host string, req KeyGenMessageRequest) (KeyGenMessageResponse, error) {
 	err := InitializeHttpClient()
@@ -330,6 +367,39 @@ func DuctKeygenProtocolMessage(host string, req KeyGenMessageRequest) (KeyGenMes
 		return KeyGenMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
 	}
 	var response KeyGenMessageResponse
+	json.NewDecoder(resp.Body).Decode(&response)
+	return response, nil
+}
+
+// Get sign protocol messages
+func DuctSignGetMessages(host string, ceremonyID string, lastSeen int64) (SignMessageResponse, error) {
+	err := InitializeHttpClient()
+	if err != nil {
+		return SignMessageResponse{}, err
+	}
+	uri, err := GetApiEndpoint(host, "GetSignMessages")
+	if err != nil {
+		return SignMessageResponse{}, err
+	}
+	req := SignMessageRequest{
+		CeremonyID: ceremonyID,
+		LastSeen:   lastSeen,
+	}
+	body, _ := json.Marshal(req)
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return SignMessageResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return SignMessageResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return SignMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+	var response SignMessageResponse
 	json.NewDecoder(resp.Body).Decode(&response)
 	return response, nil
 }
