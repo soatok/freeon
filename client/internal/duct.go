@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 )
 
 var httpClient *http.Client = nil
@@ -34,6 +35,9 @@ func InitializeHttpClient() error {
 
 // If we change the backend API, we will change this function to accomodate it
 func GetApiEndpoint(host string, feature string) (string, error) {
+	if !strings.HasPrefix(host, "http://") && !strings.HasPrefix(host, "https://") {
+		host = "http://" + host
+	}
 	u, err := url.Parse(host)
 	if err != nil {
 		return "", err
@@ -90,6 +94,14 @@ func DuctInitKeyGenCeremony(host string, req InitKeyGenRequest) (InitKeyGenRespo
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return InitKeyGenResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return InitKeyGenResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
 	var response InitKeyGenResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
@@ -114,6 +126,14 @@ func DuctJoinKeyGenCeremony(host string, req JoinKeyGenRequest) (JoinKeyGenRespo
 		return JoinKeyGenResponse{}, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return JoinKeyGenResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return JoinKeyGenResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 
 	var response JoinKeyGenResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
@@ -140,6 +160,14 @@ func DuctPollKeyGenCeremony(host string, req PollKeyGenRequest) (PollKeyGenRespo
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return PollKeyGenResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return PollKeyGenResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+
 	var response PollKeyGenResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
@@ -165,6 +193,13 @@ func DuctInitSignCeremony(host string, req InitSignRequest) (InitSignResponse, e
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return InitSignResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return InitSignResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 	var response InitSignResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
@@ -190,6 +225,13 @@ func DuctJoinSignCeremony(host string, req JoinSignRequest) (JoinSignResponse, e
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return JoinSignResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return JoinSignResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 	var response JoinSignResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
@@ -214,6 +256,13 @@ func DuctPollSignCeremony(host string, req PollSignRequest) (PollSignResponse, e
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return PollSignResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return PollSignResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 	var response PollSignResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
@@ -241,6 +290,13 @@ func DuctSignList(host string, req ListSignRequest) (ListSignResponse, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return ListSignResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return ListSignResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 	var response ListSignResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
@@ -266,6 +322,13 @@ func DuctKeygenProtocolMessage(host string, req KeyGenMessageRequest) (KeyGenMes
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return KeyGenMessageResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return KeyGenMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 	var response KeyGenMessageResponse
 	json.NewDecoder(resp.Body).Decode(&response)
 	return response, nil
@@ -288,6 +351,13 @@ func DuctSignProtocolMessage(host string, req SignMessageRequest) (SignMessageRe
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return SignMessageResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return SignMessageResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 	var response SignMessageResponse
 	json.NewDecoder(resp.Body).Decode(&response)
 	return response, nil
@@ -306,8 +376,20 @@ func DuctKeygenFinalize(host string, req KeygenFinalRequest) error {
 	if err != nil {
 		return err
 	}
-	_, err = httpClient.Post(uri, "application/json", bytes.NewReader(body))
-	return err
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func DuctSignFinalize(host string, req SignFinalRequest) error {
@@ -323,8 +405,20 @@ func DuctSignFinalize(host string, req SignFinalRequest) error {
 	if err != nil {
 		return err
 	}
-	_, err = httpClient.Post(uri, "application/json", bytes.NewReader(body))
-	return err
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func DuctGetSignature(host string, req GetSignRequest) (GetSignResponse, error) {
@@ -342,6 +436,14 @@ func DuctGetSignature(host string, req GetSignRequest) (GetSignResponse, error) 
 		return GetSignResponse{}, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return GetSignResponse{}, fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return GetSignResponse{}, fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 
 	var response GetSignResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
@@ -369,6 +471,14 @@ func DuctTerminateSignCeremony(host string, req TerminateRequest) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ResponseErrorPage
+		if json.NewDecoder(resp.Body).Decode(&errResp) == nil {
+			return fmt.Errorf("request failed: %s", errResp.Error)
+		}
+		return fmt.Errorf("request failed with status code: %d", resp.StatusCode)
+	}
 
 	var response VapidResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)

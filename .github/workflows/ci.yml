@@ -19,10 +19,10 @@ jobs:
         go-version: '1.25'
 
     - name: Build Client
-      run: go build -o ./freon -v ./client
+      run: go build -o ./bin/client -v ./client
       
     - name: Build Coordinator
-      run: go build -o ./freon-server -v ./coordinator
+      run: go build -o ./bin/coordinator -v ./coordinator
 
     - name: Test Client
       run: cd client && go test -v -short && cd ..

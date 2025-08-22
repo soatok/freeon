@@ -132,6 +132,10 @@ type TerminateRequest struct {
 	CeremonyID string `json:"ceremony-id"`
 }
 
+type ResponseErrorPage struct {
+	Error string `json:"message"`
+}
+
 type VapidResponse struct {
 	Status string `json:"status"`
 }
