@@ -222,6 +222,48 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	}, nil
 }
 
+func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]FreonCeremonySummary, error) {
+	stmt, err := db.Prepare(`SELECT
+		c.uid, c.hash, c.signature, c.openssh, c.opensshnamespace, c.active
+		FROM ceremonies c
+		JOIN keygroups g ON c.groupid = g.id
+		WHERE c.active AND g.uid = ?
+		ORDER BY c.id DESC
+		LIMIT ? OFFSET ?`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(groupID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []FreonCeremonySummary
+	for rows.Next() {
+		var ceremonyID string
+		var hash string
+		var signature string
+		var openssh bool
+		var opensshnamespace string
+		var active bool
+		if err := rows.Scan(&ceremonyID, &hash, &signature, &openssh, &opensshnamespace, &active); err != nil {
+			return nil, err
+		}
+		row := FreonCeremonySummary{
+			Uid:              ceremonyID,
+			Active:           active,
+			Hash:             hash,
+			Signature:        &signature,
+			OpenSSH:          openssh,
+			OpenSSHNamespace: opensshnamespace,
+		}
+		results = append(results, row)
+	}
+	return results, nil
+}
+
 func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 	stmt, err := db.Prepare(`
 		SELECT

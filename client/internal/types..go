@@ -123,3 +123,20 @@ type SignFinalRequest struct {
 type VapidResponse struct {
 	Status string `json:"status"`
 }
+
+type FreonCeremonySummary struct {
+	Uid              string
+	Active           bool
+	Hash             string
+	Signature        *string
+	OpenSSH          bool
+	OpenSSHNamespace string
+}
+type ListSignRequest struct {
+	GroupID string `json:"group-id"`
+	Limit   int64  `json:"limit"`
+	Offset  int64  `json:"offset"`
+}
+type ListSignResponse struct {
+	Ceremonies []FreonCeremonySummary
+}

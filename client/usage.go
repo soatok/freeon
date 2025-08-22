@@ -97,6 +97,7 @@ USAGE:
 SUBCOMMANDS:
     create    Initialize a new signature ceremony
     join      Join an existing signature ceremony
+    list      List recent signing ceremonies
     help      Print this message or the help of the given subcommand(s)
 
 `
@@ -125,6 +126,30 @@ EXAMPLES:
     freon sign create -g grp_abc123 message.txt
     echo "Hello World" | freon sign create -g grp_abc123 -
     freon sign create -g grp_abc123  --openssh --namespace git release.tar.gz
+
+`
+
+const signListUsage = `FREON SIGN LIST - List recent signing ceremonies
+
+USAGE:
+    freon sign list [OPTIONS] -g <GROUP_ID>
+
+DESCRIPTION:
+    List recent signing ceremonies for the specified group. Results are
+    paginated and can be filtered using limit and offset parameters.
+
+OPTIONS:
+    -g, --group <GROUP_ID>    Group ID to list ceremonies for
+    -h, --host <HOST>         Coordinator hostname:port
+        --limit <NUM>         Maximum number of ceremonies to return
+        --offset <NUM>        Number of ceremonies to skip (for pagination)
+        --help                Print help information
+
+EXAMPLES:
+    freon sign list -g grp_abc123
+    freon sign list -g grp_abc123 --limit 10
+    freon sign list -g grp_abc123 --limit 20 --offset 40
+    freon sign list -g grp_abc123 -h coord.example.com:8080 --limit 5
 
 `
 

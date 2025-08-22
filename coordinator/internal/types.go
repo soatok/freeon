@@ -24,13 +24,24 @@ type FreonKeygenMessage struct {
 }
 
 type FreonCeremonies struct {
-	DbId      int64
-	GroupID   int64
-	Uid       string
-	Active    bool
-	Hash      string
-	Signature *string
-	OpenSSH   bool
+	DbId             int64
+	GroupID          int64
+	Uid              string
+	Active           bool
+	Hash             string
+	Signature        *string
+	OpenSSH          bool
+	OpenSSHNamespace string
+}
+
+// For public lists of signing ceremonies
+type FreonCeremonySummary struct {
+	Uid              string
+	Active           bool
+	Hash             string
+	Signature        *string
+	OpenSSH          bool
+	OpenSSHNamespace string
 }
 
 type FreonPlayers struct {
@@ -46,4 +57,11 @@ type FreonSignMessage struct {
 	CeremonyID int64
 	Sender     int64
 	Message    []byte
+}
+
+type PollSignResponse struct {
+	GroupID      string   `json:"group-id"`
+	MyPartyID    uint16   `json:"party-id"`
+	Threshold    uint16   `json:"t"`
+	OtherParties []uint16 `json:"parties"`
 }

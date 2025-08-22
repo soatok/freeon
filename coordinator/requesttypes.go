@@ -1,5 +1,7 @@
 package main
 
+import "github.com/soatok/freon/coordinator/internal"
+
 type ResponseMainPage struct {
 	Message string `json:"message"`
 }
@@ -54,6 +56,15 @@ type InitSignRequest struct {
 }
 type InitSignResponse struct {
 	CeremonyID string `json:"ceremony-id"`
+}
+
+type ListSignRequest struct {
+	GroupID string `json:"group-id"`
+	Limit   *int64 `json:"limit"`
+	Offset  *int64 `json:"offset"`
+}
+type ListSignResponse struct {
+	Ceremonies []internal.FreonCeremonySummary
 }
 
 type JoinSignRequest struct {

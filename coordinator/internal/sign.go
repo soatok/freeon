@@ -58,13 +58,6 @@ func JoinSignCeremony(db *sql.DB, ceremonyID, hash string, myPartyID uint16) (in
 	return participantId, nil
 }
 
-type PollSignResponse struct {
-	GroupID      string   `json:"group-id"`
-	MyPartyID    uint16   `json:"party-id"`
-	Threshold    uint16   `json:"t"`
-	OtherParties []uint16 `json:"parties"`
-}
-
 func PollSignCeremony(db *sql.DB, ceremonyID string, myPartyID uint16) (PollSignResponse, error) {
 	ceremonyData, err := GetCeremonyData(db, ceremonyID)
 	if err != nil {
