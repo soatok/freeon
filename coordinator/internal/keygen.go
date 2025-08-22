@@ -14,7 +14,7 @@ func NewKeyGroup(db *sql.DB, n, t uint16) (string, error) {
 	}
 	uid = "g_" + uid
 
-	stmt, err := db.Prepare("INSERT INTO keygroups (uid, n, t) VALUES (?, ?, ?)")
+	stmt, err := db.Prepare(`INSERT INTO keygroups (uid, participants, threshold) VALUES (?, ?, ?)`)
 	if err != nil {
 		return "", err
 	}

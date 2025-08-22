@@ -11,7 +11,7 @@ func putString(buf *bytes.Buffer, s []byte) {
 	buf.Write(s)
 }
 
-func makeOpenSSHSignature(pubKey []byte, rawSig []byte, namespace string) string {
+func OpenSSHEncode(pubKey []byte, rawSig []byte, namespace string) string {
 	if len(pubKey) != 32 {
 		panic("Ed25519 public key must be 32 bytes")
 	}

@@ -23,7 +23,7 @@ func NewSignGroup(db *sql.DB, groupUid string, hash string, openssh bool, namesp
 	if err != nil {
 		return "", err
 	}
-	_, err = stmt.Exec(uid, groupData.DbId, hash, openssh)
+	_, err = stmt.Exec(uid, groupData.DbId, hash, openssh, namespace)
 	if err != nil {
 		return "", err
 	}
@@ -40,9 +40,9 @@ func JoinSignCeremony(db *sql.DB, ceremonyID, hash string, myPartyID uint16) (in
 	stmt, err := db.Prepare(`
 		SELECT par.id
 		FROM participants par
-		JOIN groups g ON par.grroupid = g.id
+		JOIN keygroups g ON par.groupid = g.id
 		JOIN ceremonies c ON c.groupid = g.id 
-		WHERE c.id = ? AND par.partyid = ?
+		WHERE c.uid = ? AND par.partyid = ?
 		`)
 	if err != nil {
 		return 0, err
@@ -64,57 +64,27 @@ func PollSignCeremony(db *sql.DB, ceremonyID string, myPartyID uint16) (PollSign
 		return PollSignResponse{}, err
 	}
 
-	stmt, err := db.Prepare(`
-		SELECT par.id, g.id, g.uid, g.threshold
-		FROM participants par
-		JOIN groups g ON par.grroupid = g.id
-		JOIN ceremonies c ON c.groupid = g.id 
-		WHERE c.id = ? AND par.partyid = ?
-		`)
-	if err != nil {
-		return PollSignResponse{}, err
-	}
-	defer stmt.Close()
-
-	var participantId int64
-	var groupId int64
-	var groupUid string
-	var threshold uint16
-	err = stmt.QueryRow(ceremonyID, ceremonyData.GroupID).Scan(&participantId, &groupId, &groupUid, &threshold)
+	groupData, err := GetGroupByID(db, ceremonyData.GroupID)
 	if err != nil {
 		return PollSignResponse{}, err
 	}
 
-	stmt2, err := db.Prepare(`
-		SELECT par.partyid, g.uid
-		FROM participants par
-		JOIN groups g ON par.grroupid = g.id
-		JOIN ceremonies c ON c.groupid = g.id 
-		WHERE c.id = ? AND par.partyid != ?
-	`)
+	players, err := GetCeremonyPlayers(db, ceremonyID)
 	if err != nil {
 		return PollSignResponse{}, err
 	}
-	defer stmt2.Close()
-	rows, err := stmt.Query(ceremonyID)
-	if err != nil {
-		return PollSignResponse{}, err
-	}
-	defer rows.Close()
 
 	var otherParties []uint16
-	for rows.Next() {
-		var otherPartyId uint16
-		if err := rows.Scan(&otherPartyId); err != nil {
-			return PollSignResponse{}, err
+	for _, player := range players {
+		if player.PartyID != myPartyID {
+			otherParties = append(otherParties, player.PartyID)
 		}
-		otherParties = append(otherParties, otherPartyId)
 	}
 
 	return PollSignResponse{
-		GroupID:      groupUid,
+		GroupID:      groupData.Uid,
 		MyPartyID:    myPartyID,
-		Threshold:    threshold,
+		Threshold:    groupData.Threshold,
 		OtherParties: otherParties,
 	}, nil
 }
