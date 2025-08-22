@@ -44,7 +44,7 @@ go install
 ```terminal
 git clone https://github.com/soatok/freon.git
 cd freon
-CGO_ENABLED=1 go build -o coordinator ./coordinator
+go build -o coordinator ./coordinator
 ./coordinator
 ```
 
