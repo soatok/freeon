@@ -34,7 +34,7 @@ func TestOpenSSHEncode(t *testing.T) {
 	sig2 = append(sig2, h2[:]...)
 
 	encoded2 := internal.OpenSSHEncode(pk2, sig2, namespace)
-	assert.NotEmpty(t, encoded)
+	assert.NotEmpty(t, encoded2)
 	const expected = `-----BEGIN SSH SIGNATURE-----
 AAAABlNTSFNJRwAAAAEAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIEWbPXw3NFqPht+qbUzQeU
 ot2rnHXclITN0UivggnYz5AAAABHRlc3QAAAAAAAAAC3NzaC1lZDI1NTE5AAAAUwAAAAtz
