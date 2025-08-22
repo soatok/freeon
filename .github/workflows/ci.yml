@@ -24,5 +24,8 @@ jobs:
     - name: Build Coordinator
       run: go build -o ./freon-server -v ./coordinator
 
-    - name: Test
-      run: go test -v -short ./...
+    - name: Test Client
+      run: cd client && go test -v -short && cd ..
+
+    - name: Test Coordinator
+      run: cd coordinator && go test -v -short && cd ..
