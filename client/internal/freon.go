@@ -550,6 +550,15 @@ func GetSignSignature(ceremonyID, host string) {
 	os.Exit(0)
 }
 
-func TerminateSignCeremony(ceremonyID string) {
-	// TODO - soatok
+func TerminateSignCeremony(host, ceremonyID string) {
+	req := TerminateRequest{
+		CeremonyID: ceremonyID,
+	}
+	err := DuctTerminateSignCeremony(host, req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
+		os.Exit(1)
+	}
+	fmt.Println("Ceremony terminated.")
+	os.Exit(0)
 }

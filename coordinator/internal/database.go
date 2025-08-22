@@ -522,3 +522,24 @@ func FinalizeSignature(db *sql.DB, c FreonCeremonies, sig string) error {
 	_, err = stmt.Exec(sig, c.DbId)
 	return err
 }
+
+func TerminateCeremony(db *sql.DB, ceremonyUid string) error {
+	stmt, err := db.Prepare(`UPDATE ceremonies SET active = FALSE WHERE uid = ?`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(ceremonyUid)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count < 1 {
+		return errors.New("no ceremony found with that UID")
+	}
+	return nil
+}

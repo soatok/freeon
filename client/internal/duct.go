@@ -65,7 +65,7 @@ func GetApiEndpoint(host string, feature string) (string, error) {
 	case "GetSignature":
 		u.Path = "/sign/get"
 	case "TerminateSignCeremony":
-		u.Path = "/sign/terminate"
+		u.Path = "/terminate"
 	default:
 		return "", fmt.Errorf("unknown feature: %s", feature)
 	}
@@ -349,4 +349,34 @@ func DuctGetSignature(host string, req GetSignRequest) (GetSignResponse, error) 
 		return GetSignResponse{}, err
 	}
 	return response, nil
+}
+
+func DuctTerminateSignCeremony(host string, req TerminateRequest) error {
+	err := InitializeHttpClient()
+	if err != nil {
+		return err
+	}
+	uri, err := GetApiEndpoint(host, "TerminateSignCeremony")
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	resp, err := httpClient.Post(uri, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	var response VapidResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return err
+	}
+	if response.Status != "OK" {
+		return fmt.Errorf("termination failed: %s", response.Status)
+	}
+	return nil
 }
