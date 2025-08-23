@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -93,6 +94,10 @@ func createKeygen(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		sendError(w, err)
+		return
+	}
+	if req.Threshold > req.Participants {
+		sendError(w, errors.New("threshold cannot exceeed party size"))
 		return
 	}
 	uid, err := internal.NewKeyGroup(db, req.Participants, req.Threshold)
