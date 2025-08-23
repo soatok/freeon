@@ -6,7 +6,7 @@ import (
 )
 
 // Create a new DKG group
-func NewKeyGroup(db *sql.DB, n, t uint16) (string, error) {
+func NewKeyGroup(db *sql.DB, partySize, threshold uint16) (string, error) {
 	// Unique ID (192 bits entropy)
 	uid, err := UniqueID()
 	if err != nil {
@@ -18,7 +18,7 @@ func NewKeyGroup(db *sql.DB, n, t uint16) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = stmt.Exec(uid, n, t)
+	_, err = stmt.Exec(uid, partySize, threshold)
 	if err != nil {
 		return "", err
 	}
