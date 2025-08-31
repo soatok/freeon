@@ -22,11 +22,9 @@ Each share of the signing key is encrypted locally using [age](https://github.co
 go install github.com/soatok/freon/client@latest
 ```
 
-#### Temporary Workaround for Replace Directive Error
+#### For Developers
 
-This package currently relies on [a fork of the Go FROST implementation](https://github.com/taurushq-io/frost-ed25519), which involves a `replace` directive. This means that that the above command temporarily does not work.
-
-Until this is resolved, this is the command needed for development installation:
+You can also clone the repository to install the client locally:
 
 ```terminal
 git clone https://github.com/soatok/freon.git
