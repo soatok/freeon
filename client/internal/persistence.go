@@ -74,13 +74,14 @@ func (cfg FreonConfig) Save() error {
 	return encoder.Encode(cfg)
 }
 
-func (cfg FreonConfig) AddShare(host, groupID, publicKey, share string, otherShares map[string]string) error {
+func (cfg FreonConfig) AddShare(host, groupID, publicKey, share string, otherShares map[string]string, myPartyID uint16) error {
 	s := Shares{
 		Host:           host,
 		GroupID:        groupID,
 		PublicKey:      publicKey,
 		EncryptedShare: share,
 		PublicShares:   otherShares,
+		MyPartyID:      myPartyID,
 	}
 	cfg.Shares = append(cfg.Shares, s)
 	return cfg.Save()

@@ -28,7 +28,7 @@ func TestPersistence(t *testing.T) {
 	assert.Equal(t, cfg, loadedCfg)
 
 	// Test AddShare
-	err = loadedCfg.AddShare("localhost", "group1", "pk1", "share1", nil)
+	err = loadedCfg.AddShare("localhost", "group1", "pk1", "share1", nil, 1)
 	assert.NoError(t, err)
 
 	// Load the config again to check if the share was added

@@ -69,6 +69,7 @@ func AmIElected(ch []byte, me uint16, party []uint16) bool {
 		// If you are not a member, you are not chosen
 		return false
 	}
+	slices.Sort(party)
 	ps := uint64(len(party))
 	index := SelectIndex(ch, ps)
 	return party[index] == me

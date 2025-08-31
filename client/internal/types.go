@@ -5,6 +5,7 @@ type Shares struct {
 	Host           string            `json:"host"`
 	GroupID        string            `json:"group-id"`
 	PublicKey      string            `json:"public-key"`
+	MyPartyID      uint16            `json:"my-party-id"`
 	EncryptedShare string            `json:"encrypted-share"`
 	PublicShares   map[string]string `json:"public-shares"`
 }
