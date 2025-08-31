@@ -153,7 +153,7 @@ func performDKGRound1(host, groupID string, myPartyID, threshold, partySize uint
 	return participant, r1Data, nil
 }
 
-func performDKGRound2(host, groupID string, myPartyID, threshold uint16, participant *dkg.Participant, r1Data []*dkg.Round1Data) ([]*dkg.Round2Data, error) {
+func performDKGRound2(host, groupID string, myPartyID, partySize uint16, participant *dkg.Participant, r1Data []*dkg.Round1Data) ([]*dkg.Round2Data, error) {
 	r2Messages, err := participant.Continue(r1Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to continue dkg: %w", err)
@@ -172,7 +172,7 @@ func performDKGRound2(host, groupID string, myPartyID, threshold uint16, partici
 	}
 
 	myR2Messages := make(map[uint16]*dkg.Round2Data)
-	for len(myR2Messages) < int(threshold)-1 {
+	for len(myR2Messages) < int(partySize)-1 {
 		resp, err := DuctKeygenProtocolMessage(host, KeyGenMessageRequest{
 			GroupID:   groupID,
 			MyPartyID: myPartyID,
@@ -241,7 +241,7 @@ func finalizeAndStoreKeys(host, groupID, recipient string, myPartyID uint16, par
 		return err
 	}
 
-	err = config.AddShare(host, groupID, groupKeyHex, encryptedShare, publicShares)
+	err = config.AddShare(host, groupID, groupKeyHex, encryptedShare, publicShares, myPartyID)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func JoinKeyGenCeremony(host, groupID, recipient string) {
 	}
 
 	// 3. Perform DKG Round 2.
-	r2Data, err := performDKGRound2(host, groupID, myPartyID, threshold, participant, r1Data)
+	r2Data, err := performDKGRound2(host, groupID, myPartyID, partySize, participant, r1Data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "DKG round 2 failed: %s\n", err.Error())
 		os.Exit(1)
@@ -319,26 +319,55 @@ func ListKeyGen() {
 
 // Join a signing ceremony
 func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
-	// First, poll the server to get metadata
+	// Let's pull in the data from the local config:
+	config, err := LoadUserConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+		os.Exit(1)
+	}
+
+	// Before we can do anything, we need to get the GroupID from the ceremony.
+	// The only way to do that is to poll.
 	pollRequest := PollSignRequest{
 		CeremonyID: ceremonyID,
-		PartyID:    nil,
+		PartyID:    nil, // We don't know our party ID yet.
 	}
 	pollResponse, err := DuctPollSignCeremony(host, pollRequest)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
 	}
-	myPartyID := uint16(pollResponse.MyPartyID)
 	groupID := pollResponse.GroupID
 	threshold := pollResponse.Threshold
 
-	// Next, we need to formally join the party and get your ID
+	var encryptedShare string
+	var publicSharesHex map[string]string
+	var publicKeyHex string
+	var myPartyID uint16
+	for _, s := range config.Shares {
+		if s.GroupID == groupID {
+			encryptedShare = s.EncryptedShare
+			publicSharesHex = s.PublicShares
+			publicKeyHex = s.PublicKey
+			myPartyID = s.MyPartyID
+			break
+		}
+	}
+	if encryptedShare == "" {
+		fmt.Fprintf(os.Stderr, "could not find encrypted share for group %s\n", groupID)
+		os.Exit(1)
+	}
+	if myPartyID == 0 {
+		fmt.Fprintf(os.Stderr, "could not find party ID for group %s\n", groupID)
+		os.Exit(1)
+	}
+
+	// Next, we need to formally join the party
 	hash := HashMessageForSanity(message, groupID)
 	joinRequest := JoinSignRequest{
 		CeremonyID:  ceremonyID,
 		MessageHash: hash,
-		MyPartyID:   pollResponse.MyPartyID,
+		MyPartyID:   myPartyID,
 	}
 
 	// Enlist ourselves before we begin polling
@@ -356,6 +385,8 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 
 	// Now let's begin polling the server until enough parties join
 	for {
+		// We need to use our actual party ID for polling now
+		pollRequest.PartyID = &myPartyID
 		pollResponse, err = DuctPollSignCeremony(host, pollRequest)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
@@ -366,28 +397,6 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 			break
 		}
 		time.Sleep(time.Second)
-	}
-
-	// Let's pull in the data from the local config:
-	config, err := LoadUserConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
-		os.Exit(1)
-	}
-	var encryptedShare string
-	var publicSharesHex map[string]string
-	var publicKeyHex string
-	for _, s := range config.Shares {
-		if s.GroupID == groupID {
-			encryptedShare = s.EncryptedShare
-			publicSharesHex = s.PublicShares
-			publicKeyHex = s.PublicKey
-			break
-		}
-	}
-	if encryptedShare == "" {
-		fmt.Fprintf(os.Stderr, "could not find encrypted share for group %s\n", groupID)
-		os.Exit(1)
 	}
 
 	// Let's decrypt the local share with age
@@ -414,6 +423,16 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		os.Exit(1)
 	}
 
+	// Great, let's process the party members now that we're full
+	partyMembers := []uint16{myPartyID}
+	partyMembers = append(partyMembers, pollResponse.OtherParties...)
+
+	// Create a map of party members for quick lookup
+	partyMemberSet := make(map[uint16]struct{})
+	for _, p := range partyMembers {
+		partyMemberSet[p] = struct{}{}
+	}
+
 	// Let's make sure we have all parties' public shares setup locally
 	publicShares := make([]*keys.PublicKeyShare, 0, len(publicSharesHex))
 	for k, v := range publicSharesHex {
@@ -421,6 +440,9 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
+		}
+		if _, ok := partyMemberSet[p16]; !ok {
+			continue
 		}
 		rawEl, err := hex.DecodeString(v)
 		if err != nil {
@@ -432,12 +454,13 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 			fmt.Fprintf(os.Stderr, "failed to decode public share for party %d: %s\n", p16, err.Error())
 			os.Exit(1)
 		}
-		publicShares = append(publicShares, &keys.PublicKeyShare{ID: p16, PublicKey: el})
+		ps := &keys.PublicKeyShare{
+			ID:        p16,
+			PublicKey: el,
+			Group:     dkg.Edwards25519Sha512.Group(),
+		}
+		publicShares = append(publicShares, ps)
 	}
-
-	// Great, let's process the party members now that we're full
-	partyMembers := []uint16{myPartyID}
-	partyMembers = append(partyMembers, pollResponse.OtherParties...)
 
 	conf := &frost.Configuration{
 		Ciphersuite:           frost.Ed25519,
@@ -452,9 +475,14 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	}
 
 	myPublicKey := dkg.Edwards25519Sha512.Group().Base().Multiply(secretKey)
+	myPkShare := &keys.PublicKeyShare{
+		ID:        myPartyID,
+		PublicKey: myPublicKey,
+		Group:     dkg.Edwards25519Sha512.Group(),
+	}
 	myKeyShare := &keys.KeyShare{
 		Secret:          secretKey,
-		PublicKeyShare:  keys.PublicKeyShare{ID: myPartyID, PublicKey: myPublicKey},
+		PublicKeyShare:  *myPkShare,
 		VerificationKey: groupKey,
 	}
 
