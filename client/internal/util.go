@@ -8,8 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"slices"
-
-	"github.com/taurusgroup/frost-ed25519/pkg/frost/party"
 )
 
 // This is just a consistency check for the message, so we can abort early if something mismatches
@@ -74,14 +72,4 @@ func AmIElected(ch []byte, me uint16, party []uint16) bool {
 	ps := uint64(len(party))
 	index := SelectIndex(ch, ps)
 	return party[index] == me
-}
-
-// Given a party.IDSlice, get a sorted []uint16 of party IDs.
-func PartyToUint16(party party.IDSlice) []uint16 {
-	var party16 []uint16
-	for _, p := range party {
-		party16 = append(party16, uint16(p))
-	}
-	slices.Sort(party16)
-	return party16
 }

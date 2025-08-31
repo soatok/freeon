@@ -1,21 +1,17 @@
 package internal
 
 import (
-	"context"
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
 	"hash"
 	"os"
-	"sync"
 	"time"
 
-	"github.com/taurusgroup/frost-ed25519/pkg/eddsa"
-	"github.com/taurusgroup/frost-ed25519/pkg/frost"
-	"github.com/taurusgroup/frost-ed25519/pkg/frost/party"
-	"github.com/taurusgroup/frost-ed25519/pkg/messages"
-	"github.com/taurusgroup/frost-ed25519/pkg/ristretto"
-	"github.com/taurusgroup/frost-ed25519/pkg/state"
+	"github.com/bytemare/dkg"
+	"github.com/bytemare/ecc"
+	"github.com/bytemare/frost"
+	"github.com/bytemare/secret-sharing/keys"
 )
 
 // The default timeout for the FROST protocol.
@@ -24,11 +20,6 @@ var timeout time.Duration = time.Hour
 
 // The ID of the last message seen. Sent with HTTP requests to fetch more messages.
 var lastMessageIdSeen int64
-var lastMessageMutex sync.Mutex
-
-// Used for goroutines that process FROST protocol messages
-// See ProcessKeygenMessages() and ProcessSignMessages() below.
-var messagesIn chan *messages.Message
 
 // Used for determining which party should report the final result to the ceremony
 var ceremonyHash hash.Hash
@@ -38,11 +29,7 @@ var ceremonyKeyGen = []byte("FREON KeyGen Ceremony v1")
 var ceremonySign = []byte("FREON Sign Ceremony v1")
 
 // Initialize a keygen ceremony with the coordinator
-func InitKeyGenCeremony(host string, participants, threshold uint16) {
-	if threshold > participants {
-		fmt.Printf("t > n: t = %d, n = %d\n", threshold, participants)
-		os.Exit(1)
-	}
+func InitKeyGenCeremony(host string, participants uint16, threshold uint16) {
 	req := InitKeyGenRequest{
 		Participants: participants,
 		Threshold:    threshold,
@@ -73,374 +60,243 @@ func InitSignCeremony(host, groupID string, message []byte, openssh bool, namesp
 	os.Exit(0)
 }
 
-// Goroutine for processing the Keygen protocol messages
-func ProcessKeygenMessages(msgsIn chan *messages.Message, s *state.State, host, groupID string, myPartyID uint16) {
-	for {
-		select {
-		case msg := <-msgsIn:
-			// The State performs some verification to check that the message is relevant for this protocol
-			if err := s.HandleMessage(msg); err != nil {
-				// An error here may not be too bad, it is not necessary to abort.
-				fmt.Println("failed to handle message", err)
-				continue
-			}
-
-			// We ask the State for the next round of messages, and must handle them here.
-			// If an abort has occurred, then no messages are returned.
-			for _, msgOut := range s.ProcessAll() {
-				// Transport layer
-				msgBytes, err := msgOut.MarshalBinary()
-				if err != nil {
-					fmt.Println("failed to serialize", err)
-					continue
-				}
-				lastMessageMutex.Lock()
-				request := KeyGenMessageRequest{
-					GroupID:   groupID,
-					Message:   hex.EncodeToString(msgBytes),
-					MyPartyID: myPartyID,
-					LastSeen:  lastMessageIdSeen,
-				}
-				response, err := DuctKeygenProtocolMessage(host, request)
-				if err != nil {
-					fmt.Println("failed to parse response", err)
-					lastMessageMutex.Unlock()
-					continue
-				}
-
-				// Did we get new messages to process?
-				for _, m := range response.Messages {
-					raw, err := hex.DecodeString(m)
-					if err != nil {
-						fmt.Println("failed to parse message", err)
-						continue
-					}
-					newMsg := messages.Message{}
-					newMsg.UnmarshalBinary(raw)
-					// Append to messagesIn
-					messagesIn <- &newMsg
-				}
-				lastMessageIdSeen = response.LatestMessageID
-				lastMessageMutex.Unlock()
-			}
-
-		case <-s.Done():
-			// s.Done() closes either when an abort has been called, or when the output has successfully been computed.
-			// If an error did occur, we can handle it here
-			err := s.WaitForError()
-			if err != nil {
-				fmt.Println("protocol aborted: ", err)
-			}
-			// In the main thread, it is safe to use the Output.
-			return
-		}
-	}
-}
-
-// Goroutine for processing the Sign protocol messages
-func ProcessSignMessages(msgsIn chan *messages.Message, s *state.State, host, ceremonyID string, myPartyID uint16) {
-	for {
-		select {
-		case msg := <-msgsIn:
-			// The State performs some verification to check that the message is relevant for this protocol
-			if err := s.HandleMessage(msg); err != nil {
-				// An error here may not be too bad, it is not necessary to abort.
-				fmt.Println("failed to handle message", err)
-				continue
-			}
-
-			// We ask the State for the next round of messages, and must handle them here.
-			// If an abort has occurred, then no messages are returned.
-			for _, msgOut := range s.ProcessAll() {
-				// Transport layer
-				msgBytes, err := msgOut.MarshalBinary()
-				if err != nil {
-					fmt.Println("failed to serialize", err)
-					continue
-				}
-				lastMessageMutex.Lock()
-				request := SignMessageRequest{
-					CeremonyID: ceremonyID,
-					MyPartyID:  myPartyID,
-					Message:    hex.EncodeToString(msgBytes),
-					LastSeen:   lastMessageIdSeen,
-				}
-				response, err := DuctSignProtocolMessage(host, request)
-				if err != nil {
-					fmt.Println("failed to parse response", err)
-					lastMessageMutex.Unlock()
-					continue
-				}
-
-				// Did we get new messages to process?
-				for _, m := range response.Messages {
-					raw, err := hex.DecodeString(m)
-					if err != nil {
-						fmt.Println("failed to parse message", err)
-						continue
-					}
-					newMsg := messages.Message{}
-					newMsg.UnmarshalBinary(raw)
-					// Append to messagesIn
-					messagesIn <- &newMsg
-				}
-				lastMessageIdSeen = response.LatestMessageID
-				lastMessageMutex.Unlock()
-			}
-
-		case <-s.Done():
-			// s.Done() closes either when an abort has been called, or when the output has successfully been computed.
-			// If an error did occur, we can handle it here
-			err := s.WaitForError()
-			if err != nil {
-				fmt.Println("protocol aborted: ", err)
-			}
-			// In the main thread, it is safe to use the Output.
-			return
-		}
-	}
-}
-
-func PollKeyGenMessages(ctx context.Context, host, groupID string, myPartyID uint16) {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			lastMessageMutex.Lock()
-			seen := lastMessageIdSeen
-			lastMessageMutex.Unlock()
-			response, err := DuctKeygenGetMessages(host, groupID, myPartyID, seen)
-			if err != nil {
-				// Don't spam errors for polling
-				continue
-			}
-			if len(response.Messages) > 0 {
-				for _, m := range response.Messages {
-					raw, err := hex.DecodeString(m)
-					if err != nil {
-						continue
-					}
-					newMsg := messages.Message{}
-					newMsg.UnmarshalBinary(raw)
-					messagesIn <- &newMsg
-				}
-			}
-			lastMessageMutex.Lock()
-			lastMessageIdSeen = response.LatestMessageID
-			lastMessageMutex.Unlock()
-		}
-	}
-}
-
-func PollSignMessages(ctx context.Context, host, ceremonyID string, myPartyID uint16) {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			lastMessageMutex.Lock()
-			seen := lastMessageIdSeen
-			lastMessageMutex.Unlock()
-			response, err := DuctSignGetMessages(host, ceremonyID, myPartyID, seen)
-			if err != nil {
-				// Don't spam errors
-				continue
-			}
-			if len(response.Messages) > 0 {
-				for _, m := range response.Messages {
-					raw, err := hex.DecodeString(m)
-					if err != nil {
-						continue
-					}
-					newMsg := messages.Message{}
-					newMsg.UnmarshalBinary(raw)
-					messagesIn <- &newMsg
-				}
-			}
-			lastMessageMutex.Lock()
-			lastMessageIdSeen = response.LatestMessageID
-			lastMessageMutex.Unlock()
-		}
-	}
-}
-
-// Join a keygen ceremony
-func JoinKeyGenCeremony(host, groupID, recipient string) {
-	// First, poll the server to make sure it exists
+func joinCeremonyAndPoll(host, groupID string) (uint16, uint16, uint16, []uint16, error) {
 	pollRequest := PollKeyGenRequest{
 		GroupID: groupID,
 		PartyID: nil,
 	}
 	pollResponse, err := DuctPollKeyGenCeremony(host, pollRequest)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+		return 0, 0, 0, nil, err
 	}
 
-	// Next, we need to formally join the party and get your ID
 	joinRequest := JoinKeyGenRequest{
 		GroupID: groupID,
 	}
 	joinResponse, err := DuctJoinKeyGenCeremony(host, joinRequest)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+		return 0, 0, 0, nil, err
 	}
-	if pollResponse.Threshold > pollResponse.PartySize {
-		fmt.Fprintf(os.Stderr, "Threshold is larger than Party Size")
-		os.Exit(1)
-	}
+	ceremonyHash = sha512.New384()
+	ceremonyHash.Write(ceremonyKeyGen)
 
-	// Load the properties from this threshold
-	myPartyID := party.ID(joinResponse.MyPartyID)
-	threshold := party.Size(pollResponse.Threshold)
-	pollRequest.PartyID = &joinResponse.MyPartyID
+	myPartyID := joinResponse.MyPartyID
+	threshold := pollResponse.Threshold
+	partySize := pollResponse.PartySize
+	pollRequest.PartyID = &myPartyID
 
-	// Now let's begin polling the server until enough parties join
 	for {
 		pollResponse, err = DuctPollKeyGenCeremony(host, pollRequest)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
-			os.Exit(1)
+			return 0, 0, 0, nil, err
 		}
 		found := uint16(len(pollResponse.OtherParties))
-		if found+1 == pollResponse.PartySize {
-			// We can stop polling
+		if found+1 == partySize {
 			break
 		}
 		time.Sleep(time.Second)
 	}
 
-	// Great, let's process the party members now that we're full
-	partyMembers := []party.ID{myPartyID}
-	for _, p := range pollResponse.OtherParties {
-		partyMembers = append(partyMembers, party.ID(p))
-	}
-	set := party.NewIDSlice(partyMembers)
-	state, output, err := frost.NewKeygenState(myPartyID, set, threshold, timeout)
+	partyMembers := []uint16{myPartyID}
+	partyMembers = append(partyMembers, pollResponse.OtherParties...)
+	return myPartyID, threshold, partySize, partyMembers, nil
+}
+
+func performDKGRound1(host, groupID string, myPartyID, threshold, partySize uint16, partyMembers []uint16) (*dkg.Participant, []*dkg.Round1Data, error) {
+	participant, err := dkg.Edwards25519Sha512.NewParticipant(myPartyID, threshold, partySize)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+		return nil, nil, fmt.Errorf("failed to start dkg: %w", err)
 	}
 
-	// Use a goroutine for processing messages (which can append more messages)
-	messagesIn = make(chan *messages.Message, len(partyMembers)*2)
-	lastMessageIdSeen = 0
-	ceremonyHash = sha512.New384()
-	ceremonyHash.Write(ceremonyKeyGen)
+	r1Message := participant.Start()
+	r1Bytes := r1Message.Encode()
+	_, err = DuctKeygenProtocolMessage(host, KeyGenMessageRequest{
+		GroupID:   groupID,
+		Message:   hex.EncodeToString(r1Bytes),
+		MyPartyID: myPartyID,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to send r1 message: %w", err)
+	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go PollKeyGenMessages(ctx, host, groupID, joinResponse.MyPartyID)
-	go ProcessKeygenMessages(messagesIn, state, host, groupID, joinResponse.MyPartyID)
-
-	// Kick off the ceremony
-	for _, msgOut := range state.ProcessAll() {
-		msgBytes, err := msgOut.MarshalBinary()
-		if err != nil {
-			fmt.Println("failed to serialize", err)
-			continue
-		}
-		lastMessageMutex.Lock()
-		request := KeyGenMessageRequest{
+	r1Messages := make(map[uint16]*dkg.Round1Data)
+	r1Messages[myPartyID] = r1Message
+	for len(r1Messages) < len(partyMembers) {
+		resp, err := DuctKeygenProtocolMessage(host, KeyGenMessageRequest{
 			GroupID:   groupID,
-			Message:   hex.EncodeToString(msgBytes),
-			MyPartyID: joinResponse.MyPartyID,
+			MyPartyID: myPartyID,
 			LastSeen:  lastMessageIdSeen,
-		}
-		response, err := DuctKeygenProtocolMessage(host, request)
+		})
 		if err != nil {
-			fmt.Println("failed to parse response", err)
-			lastMessageMutex.Unlock()
-			continue
+			return nil, nil, fmt.Errorf("failed to poll for r1 messages: %w", err)
 		}
-
-		// Did we get new messages to process?
-		for _, m := range response.Messages {
-			raw, err := hex.DecodeString(m)
+		for _, msgStr := range resp.Messages {
+			msgBytes, err := hex.DecodeString(msgStr)
 			if err != nil {
-				fmt.Println("failed to parse message", err)
 				continue
 			}
-			newMsg := messages.Message{}
-			newMsg.UnmarshalBinary(raw)
-			// Append to messagesIn
-			messagesIn <- &newMsg
+			ceremonyHash.Write(msgBytes)
+			msg := &dkg.Round1Data{}
+			if err := msg.Decode(msgBytes); err == nil {
+				if _, ok := r1Messages[msg.SenderIdentifier]; !ok {
+					r1Messages[msg.SenderIdentifier] = msg
+				}
+			}
 		}
-		lastMessageIdSeen = response.LatestMessageID
-		lastMessageMutex.Unlock()
+		lastMessageIdSeen = resp.LatestMessageID
+		time.Sleep(time.Second)
+	}
+	var r1Data []*dkg.Round1Data
+	for _, m := range r1Messages {
+		r1Data = append(r1Data, m)
+	}
+	return participant, r1Data, nil
+}
+
+func performDKGRound2(host, groupID string, myPartyID, threshold uint16, participant *dkg.Participant, r1Data []*dkg.Round1Data) ([]*dkg.Round2Data, error) {
+	r2Messages, err := participant.Continue(r1Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to continue dkg: %w", err)
+	}
+	for _, msg := range r2Messages {
+		msgBytes := msg.Encode()
+		ceremonyHash.Write(msgBytes)
+		_, err = DuctKeygenProtocolMessage(host, KeyGenMessageRequest{
+			GroupID:   groupID,
+			Message:   hex.EncodeToString(msgBytes),
+			MyPartyID: myPartyID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to send r2 message: %w", err)
+		}
 	}
 
-	err = state.WaitForError()
+	myR2Messages := make(map[uint16]*dkg.Round2Data)
+	for len(myR2Messages) < int(threshold)-1 {
+		resp, err := DuctKeygenProtocolMessage(host, KeyGenMessageRequest{
+			GroupID:   groupID,
+			MyPartyID: myPartyID,
+			LastSeen:  lastMessageIdSeen,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to poll for r2 messages: %w", err)
+		}
+		for _, msgStr := range resp.Messages {
+			msgBytes, err := hex.DecodeString(msgStr)
+			if err != nil {
+				continue
+			}
+			ceremonyHash.Write(msgBytes)
+			msg := &dkg.Round2Data{}
+			if err := msg.Decode(msgBytes); err == nil {
+				if msg.RecipientIdentifier == myPartyID {
+					if _, ok := myR2Messages[msg.SenderIdentifier]; !ok {
+						myR2Messages[msg.SenderIdentifier] = msg
+					}
+				}
+			}
+		}
+		lastMessageIdSeen = resp.LatestMessageID
+		time.Sleep(time.Second)
+	}
+	var r2Data []*dkg.Round2Data
+	for _, m := range myR2Messages {
+		r2Data = append(r2Data, m)
+	}
+	return r2Data, nil
+}
+
+func finalizeAndStoreKeys(host, groupID, recipient string, myPartyID uint16, partyMembers []uint16, participant *dkg.Participant, r1Data []*dkg.Round1Data, r2Data []*dkg.Round2Data) error {
+	keyShare, err := participant.Finalize(r1Data, r2Data)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+		return fmt.Errorf("failed to finalize dkg: %w", err)
 	}
 
-	// If we've gotten here without an error, a group key has been established!
-	public := output.Public
-	groupKeyStore, err := public.GroupKey.MarshalJSON()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+	var allCommitments [][]*ecc.Element
+	for _, d := range r1Data {
+		allCommitments = append(allCommitments, d.Commitment)
 	}
-	groupKey := hex.EncodeToString(public.GroupKey.ToEd25519())
-	plaintextShare, err := output.SecretKey.MarshalJSON()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+
+	publicShares := make(map[string]string)
+	for _, pID := range partyMembers {
+		pubKey, err := dkg.ComputeParticipantPublicKey(dkg.Edwards25519Sha512, pID, allCommitments)
+		if err != nil {
+			return fmt.Errorf("failed to compute public key for party %d: %w", pID, err)
+		}
+		pubKeyBytes := pubKey.Encode()
+		publicShares[Uint16ToHexBE(pID)] = hex.EncodeToString(pubKeyBytes)
 	}
-	secretShare, err := EncryptShare(recipient, plaintextShare)
+
+	groupKeyBytes := keyShare.VerificationKey.Encode()
+	groupKeyHex := hex.EncodeToString(groupKeyBytes)
+
+	secretShareBytes := keyShare.Secret.Encode()
+	encryptedShare, err := EncryptShare(recipient, secretShareBytes)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+		return fmt.Errorf("failed to encrypt share: %w", err)
 	}
+
 	config, err := LoadUserConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
-	}
-	// Let's build the list of public shares
-	publicShares := make(map[string]string)
-	for index, sh := range output.Public.Shares {
-		i := Uint16ToHexBE(uint16(index))
-		shEncoded, err := sh.MarshalText()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
-			os.Exit(1)
-		}
-		publicShares[i] = string(shEncoded)
+		return err
 	}
 
-	// Okay, finally, we add the share data to the local config
-	err = config.AddShare(host, groupID, uint16(myPartyID), string(groupKeyStore), secretShare, publicShares)
+	err = config.AddShare(host, groupID, groupKeyHex, encryptedShare, publicShares)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
+		return err
 	}
 	ch := ceremonyHash.Sum(nil)
-	if AmIElected(ch, uint16(myPartyID), PartyToUint16(partyMembers)) {
+	if AmIElected(ch, myPartyID, partyMembers) {
 		report := KeygenFinalRequest{
 			GroupID:   groupID,
-			MyPartyID: uint16(myPartyID),
-			PublicKey: groupKey,
+			MyPartyID: myPartyID,
+			PublicKey: groupKeyHex,
 		}
 		err := DuctKeygenFinalize(host, report)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
-			// This is only a reporting error, so do not error out.
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		}
 	}
-	fmt.Printf("Group public key:\n%s\n", groupKey)
-	// OK
+	fmt.Printf("Group public key:\n%s\n", groupKeyHex)
 	os.Exit(0)
+	return nil
+}
+
+// Join a keygen ceremony
+func JoinKeyGenCeremony(host, groupID, recipient string) {
+	// This function is getting long. Let's break it down into smaller pieces.
+	// 1. Join the ceremony and get participant info.
+	// 2. Perform DKG Round 1.
+	// 3. Perform DKG Round 2.
+	// 4. Finalize and store keys.
+
+	// 1. Join the ceremony and get participant info.
+	myPartyID, threshold, partySize, partyMembers, err := joinCeremonyAndPoll(host, groupID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to join ceremony: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	// 2. Perform DKG Round 1.
+	participant, r1Data, err := performDKGRound1(host, groupID, myPartyID, threshold, partySize, partyMembers)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "DKG round 1 failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	// 3. Perform DKG Round 2.
+	r2Data, err := performDKGRound2(host, groupID, myPartyID, threshold, participant, r1Data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "DKG round 2 failed: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	// 4. Finalize and store keys.
+	err = finalizeAndStoreKeys(host, groupID, recipient, myPartyID, partyMembers, participant, r1Data, r2Data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to finalize and store keys: %s\n", err.Error())
+		os.Exit(1)
+	}
 }
 
 // List local key shares and groups
@@ -470,49 +326,25 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	}
 	pollResponse, err := DuctPollSignCeremony(host, pollRequest)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
 	}
+	myPartyID := uint16(pollResponse.MyPartyID)
 	groupID := pollResponse.GroupID
 	threshold := pollResponse.Threshold
 
-	// Let's pull in the data from the local config to find our party ID
-	config, err := LoadUserConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
-		os.Exit(1)
-	}
-	var encryptedShare string = ""
-	var publicSharesEncoded map[string]string
-	var publicKeyEncoded string
-	var myPartyIDfromConfig uint16
-	for _, s := range config.Shares {
-		if s.GroupID == groupID {
-			encryptedShare = s.EncryptedShare
-			publicSharesEncoded = s.PublicShares
-			publicKeyEncoded = s.PublicKey
-			myPartyIDfromConfig = s.PartyID
-			break
-		}
-	}
-	if encryptedShare == "" {
-		fmt.Fprintf(os.Stderr, "could not find encrypted share for group %s", groupID)
-		os.Exit(1)
-	}
-	myPartyID := party.ID(myPartyIDfromConfig)
-
-	// Next, we need to formally join the party
+	// Next, we need to formally join the party and get your ID
 	hash := HashMessageForSanity(message, groupID)
 	joinRequest := JoinSignRequest{
 		CeremonyID:  ceremonyID,
 		MessageHash: hash,
-		MyPartyID:   myPartyIDfromConfig,
+		MyPartyID:   pollResponse.MyPartyID,
 	}
 
 	// Enlist ourselves before we begin polling
 	res, err := DuctJoinSignCeremony(host, joinRequest)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
 	}
 	if !res.Status {
@@ -523,11 +355,10 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 	opensshNamespace := res.Namespace
 
 	// Now let's begin polling the server until enough parties join
-	pollRequest.PartyID = &myPartyIDfromConfig
 	for {
 		pollResponse, err = DuctPollSignCeremony(host, pollRequest)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 			os.Exit(1)
 		}
 		others := uint16(len(pollResponse.OtherParties))
@@ -537,142 +368,227 @@ func JoinSignCeremony(ceremonyID, host, identityFile string, message []byte) {
 		time.Sleep(time.Second)
 	}
 
-	publicKey := new(eddsa.PublicKey)
-	err = publicKey.UnmarshalJSON([]byte(publicKeyEncoded))
+	// Let's pull in the data from the local config:
+	config, err := LoadUserConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not decode encrypted share for group %s\n%s", groupID, err.Error())
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
 	}
-
-	// Let's deserialize the public shares
-	publicShares := make(map[party.ID]*ristretto.Element, len(publicSharesEncoded))
-	for k, v := range publicSharesEncoded {
-		p16, err := HexBEToUint16(k)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
-			os.Exit(1)
+	var encryptedShare string
+	var publicSharesHex map[string]string
+	var publicKeyHex string
+	for _, s := range config.Shares {
+		if s.GroupID == groupID {
+			encryptedShare = s.EncryptedShare
+			publicSharesHex = s.PublicShares
+			publicKeyHex = s.PublicKey
+			break
 		}
-		pid := party.ID(p16)
-		el := new(ristretto.Element)
-		el.UnmarshalText([]byte(v))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
-			os.Exit(1)
-		}
-		publicShares[pid] = el
+	}
+	if encryptedShare == "" {
+		fmt.Fprintf(os.Stderr, "could not find encrypted share for group %s\n", groupID)
+		os.Exit(1)
 	}
 
 	// Let's decrypt the local share with age
 	secretBytes, err := DecryptShareFor(encryptedShare, identityFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		os.Exit(1)
 	}
-	var secret eddsa.SecretShare
-	err = secret.UnmarshalJSON(secretBytes)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
+	secretKey := dkg.Edwards25519Sha512.Group().NewScalar()
+	if err := secretKey.Decode(secretBytes); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to decode secret key: %s\n", err.Error())
 		os.Exit(1)
+	}
+
+	// Let's decode the public key and public shares
+	groupKeyBytes, err := hex.DecodeString(publicKeyHex)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to decode group key: %s\n", err.Error())
+		os.Exit(1)
+	}
+	groupKey := dkg.Edwards25519Sha512.Group().NewElement()
+	if err := groupKey.Decode(groupKeyBytes); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to decode group key: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	// Let's make sure we have all parties' public shares setup locally
+	publicShares := make([]*keys.PublicKeyShare, 0, len(publicSharesHex))
+	for k, v := range publicSharesHex {
+		p16, err := HexBEToUint16(k)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+		rawEl, err := hex.DecodeString(v)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
+			os.Exit(1)
+		}
+		el := dkg.Edwards25519Sha512.Group().NewElement()
+		if err := el.Decode(rawEl); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to decode public share for party %d: %s\n", p16, err.Error())
+			os.Exit(1)
+		}
+		publicShares = append(publicShares, &keys.PublicKeyShare{ID: p16, PublicKey: el})
 	}
 
 	// Great, let's process the party members now that we're full
-	partyMembers := []party.ID{myPartyID}
-	for _, p := range pollResponse.OtherParties {
-		partyMembers = append(partyMembers, party.ID(p))
-	}
-	set := party.NewIDSlice(partyMembers)
+	partyMembers := []uint16{myPartyID}
+	partyMembers = append(partyMembers, pollResponse.OtherParties...)
 
-	publicData := eddsa.Public{
-		PartyIDs:  set,
-		Threshold: party.Size(threshold),
-		Shares:    publicShares,
-		GroupKey:  publicKey,
+	conf := &frost.Configuration{
+		Ciphersuite:           frost.Ed25519,
+		Threshold:             threshold,
+		MaxSigners:            uint16(len(partyMembers)),
+		VerificationKey:       groupKey,
+		SignerPublicKeyShares: publicShares,
 	}
-
-	// Initilize the Sign ceremony state
-	state, signOutput, err := frost.NewSignState(set, &secret, &publicData, message, timeout)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
+	if err := conf.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize frost config: %s\n", err.Error())
 		os.Exit(1)
 	}
 
-	// Use a goroutine for processing messages (which can append more messages)
-	messagesIn = make(chan *messages.Message, len(partyMembers)*2)
-	lastMessageIdSeen = 0
+	myPublicKey := dkg.Edwards25519Sha512.Group().Base().Multiply(secretKey)
+	myKeyShare := &keys.KeyShare{
+		Secret:          secretKey,
+		PublicKeyShare:  keys.PublicKeyShare{ID: myPartyID, PublicKey: myPublicKey},
+		VerificationKey: groupKey,
+	}
+
+	signer, err := conf.Signer(myKeyShare)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create signer: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	// Round 1: Commitment
 	ceremonyHash = sha512.New384()
 	ceremonyHash.Write(ceremonySign)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go PollSignMessages(ctx, host, ceremonyID, uint16(myPartyID))
-	go ProcessSignMessages(messagesIn, state, host, ceremonyID, uint16(myPartyID))
-
-	// Kick off the ceremony
-	for _, msgOut := range state.ProcessAll() {
-		msgBytes, err := msgOut.MarshalBinary()
-		if err != nil {
-			fmt.Println("failed to serialize", err)
-			continue
-		}
-		lastMessageMutex.Lock()
-		seen := lastMessageIdSeen
-		lastMessageMutex.Unlock()
-		request := SignMessageRequest{
-			CeremonyID: ceremonyID,
-			Message:    hex.EncodeToString(msgBytes),
-			MyPartyID:  uint16(myPartyID),
-			LastSeen:   seen,
-		}
-		response, err := DuctSignProtocolMessage(host, request)
-		if err != nil {
-			fmt.Println("failed to parse response", err)
-			continue
-		}
-
-		// Did we get new messages to process?
-		for _, m := range response.Messages {
-			raw, err := hex.DecodeString(m)
-			if err != nil {
-				fmt.Println("failed to parse message", err)
-				continue
-			}
-			newMsg := messages.Message{}
-			newMsg.UnmarshalBinary(raw)
-			// Append to messagesIn
-			messagesIn <- &newMsg
-		}
-		lastMessageMutex.Lock()
-		lastMessageIdSeen = response.LatestMessageID
-		lastMessageMutex.Unlock()
-	}
-
-	err = state.WaitForError()
+	commitment := signer.Commit()
+	commitBytes := commitment.Encode()
+	_, err = DuctSignProtocolMessage(host, SignMessageRequest{
+		CeremonyID: ceremonyID,
+		Message:    hex.EncodeToString(commitBytes),
+		MyPartyID:  myPartyID,
+	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "WaitForError\n")
-		fmt.Fprintf(os.Stderr, "%s", err.Error())
+		fmt.Fprintf(os.Stderr, "failed to send commitment: %s\n", err.Error())
 		os.Exit(1)
 	}
 
-	// Final signature aggregation
+	// Poll for commitments from other participants
+	commitments := make(map[uint16]*frost.Commitment)
+	commitments[myPartyID] = commitment
+	for len(commitments) < len(partyMembers) {
+		resp, err := DuctSignProtocolMessage(host, SignMessageRequest{
+			CeremonyID: ceremonyID,
+			MyPartyID:  myPartyID,
+			LastSeen:   lastMessageIdSeen,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to poll for commitments: %s\n", err.Error())
+			os.Exit(1)
+		}
+		for _, msgStr := range resp.Messages {
+			msgBytes, err := hex.DecodeString(msgStr)
+			if err != nil {
+				continue // Ignore invalid messages
+			}
+			ceremonyHash.Write(msgBytes)
+			c := &frost.Commitment{}
+			if err := c.Decode(msgBytes); err == nil {
+				if _, ok := commitments[c.SignerID]; !ok {
+					commitments[c.SignerID] = c
+				}
+			}
+		}
+		lastMessageIdSeen = resp.LatestMessageID
+		time.Sleep(time.Second)
+	}
+
+	var commitmentList []*frost.Commitment
+	for _, c := range commitments {
+		commitmentList = append(commitmentList, c)
+	}
+
+	// Round 2: Sign
+	sigShare, err := signer.Sign(message, commitmentList)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to sign: %s\n", err.Error())
+		os.Exit(1)
+	}
+	shareBytes := sigShare.Encode()
+	_, err = DuctSignProtocolMessage(host, SignMessageRequest{
+		CeremonyID: ceremonyID,
+		Message:    hex.EncodeToString(shareBytes),
+		MyPartyID:  myPartyID,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to send signature share: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	// Poll for signature shares from other participants
+	sigShares := make(map[uint16]*frost.SignatureShare)
+	sigShares[myPartyID] = sigShare
+	for len(sigShares) < len(partyMembers) {
+		resp, err := DuctSignProtocolMessage(host, SignMessageRequest{
+			CeremonyID: ceremonyID,
+			MyPartyID:  myPartyID,
+			LastSeen:   lastMessageIdSeen,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to poll for signature shares: %s\n", err.Error())
+			os.Exit(1)
+		}
+		for _, msgStr := range resp.Messages {
+			msgBytes, err := hex.DecodeString(msgStr)
+			if err != nil {
+				continue // Ignore invalid messages
+			}
+			ceremonyHash.Write(msgBytes)
+			s := &frost.SignatureShare{}
+			if err := s.Decode(msgBytes); err == nil {
+				if _, ok := sigShares[s.SignerIdentifier]; !ok {
+					sigShares[s.SignerIdentifier] = s
+				}
+			}
+		}
+		lastMessageIdSeen = resp.LatestMessageID
+		time.Sleep(time.Second)
+	}
+	var signatureShares []*frost.SignatureShare
+	for _, s := range sigShares {
+		signatureShares = append(signatureShares, s)
+	}
+
+	// Aggregate signatures
+	finalSignature, err := conf.AggregateSignatures(message, signatureShares, commitmentList, true)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to aggregate signatures: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	finalSignatureBytes := append(finalSignature.R.Encode(), finalSignature.Z.Encode()...)
 	var groupSig string
 	if openssh {
-		rawPk := publicKey.ToEd25519()
-		groupSig = OpenSSHEncode(rawPk, signOutput.Signature.ToEd25519(), opensshNamespace)
+		groupSig = OpenSSHEncode(groupKeyBytes, finalSignatureBytes, opensshNamespace)
 	} else {
-		groupSig = hex.EncodeToString(signOutput.Signature.ToEd25519())
+		groupSig = hex.EncodeToString(finalSignatureBytes)
 	}
 	ch := ceremonyHash.Sum(nil)
-
-	if AmIElected(ch, uint16(myPartyID), PartyToUint16(partyMembers)) {
+	if AmIElected(ch, myPartyID, partyMembers) {
 		report := SignFinalRequest{
 			CeremonyID: ceremonyID,
-			MyPartyID:  uint16(myPartyID),
+			MyPartyID:  myPartyID,
 			Signature:  groupSig,
 		}
 		err := DuctSignFinalize(host, report)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
-			// We do not abort here, since the only error was with reporting upstream
+			fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 		}
 	}
 	fmt.Printf("Signature:\n%s\n", groupSig)
@@ -734,6 +650,7 @@ func GetSignSignature(ceremonyID, host string) {
 	os.Exit(0)
 }
 
+// Tell the coordinator to pull the plug on a signing ceremony
 func TerminateSignCeremony(host, ceremonyID string) {
 	req := TerminateRequest{
 		CeremonyID: ceremonyID,
