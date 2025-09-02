@@ -1,6 +1,6 @@
 package main
 
-import "github.com/soatok/freon/coordinator/internal"
+import "github.com/soatok/freeon/coordinator/internal"
 
 type ResponseMainPage struct {
 	Message string `json:"message"`
@@ -64,7 +64,7 @@ type ListSignRequest struct {
 	Offset  *int64 `json:"offset"`
 }
 type ListSignResponse struct {
-	Ceremonies []internal.FreonCeremonySummary
+	Ceremonies []internal.FreeonCeremonySummary
 }
 
 type JoinSignRequest struct {

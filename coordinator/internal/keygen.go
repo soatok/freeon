@@ -27,23 +27,23 @@ func NewKeyGroup(db *sql.DB, partySize, threshold uint16) (string, error) {
 }
 
 // Create a blank slate participant ID
-func AddParticipant(db *sql.DB, groupUid string) (FreonParticipant, error) {
+func AddParticipant(db *sql.DB, groupUid string) (FreeonParticipant, error) {
 	tx, err := db.Begin()
 	if err != nil {
-		return FreonParticipant{}, err
+		return FreeonParticipant{}, err
 	}
 	defer tx.Rollback() // Rollback on error
 
 	groupData, err := GetGroupData(tx, groupUid)
 	if err != nil {
-		return FreonParticipant{}, err
+		return FreeonParticipant{}, err
 	}
 	participants, err := GetGroupParticipants(tx, groupUid)
 	if err != nil {
-		return FreonParticipant{}, err
+		return FreeonParticipant{}, err
 	}
 	if len(participants) >= int(groupData.Participants) {
-		return FreonParticipant{}, errors.New("cannot add participant: group is full")
+		return FreeonParticipant{}, errors.New("cannot add participant: group is full")
 	}
 
 	// Figure out the maximum party ID for existing participants
@@ -54,18 +54,18 @@ func AddParticipant(db *sql.DB, groupUid string) (FreonParticipant, error) {
 		}
 	}
 	if max == 0xFFFF {
-		return FreonParticipant{}, errors.New("cannot add participant: party ID would overflow")
+		return FreeonParticipant{}, errors.New("cannot add participant: party ID would overflow")
 	}
 	nextMaxId := max + 1
 
 	// Get a unique participant ID
 	uid, err := UniqueID()
 	if err != nil {
-		return FreonParticipant{}, err
+		return FreeonParticipant{}, err
 	}
 	uid = "p_" + uid
 
-	p := FreonParticipant{
+	p := FreeonParticipant{
 		DbId:    int64(0),
 		GroupID: groupData.DbId,
 		Uid:     uid,
@@ -74,28 +74,28 @@ func AddParticipant(db *sql.DB, groupUid string) (FreonParticipant, error) {
 	}
 	id, err := InsertParticipant(tx, p)
 	if err != nil {
-		return FreonParticipant{}, err
+		return FreeonParticipant{}, err
 	}
 	p.DbId = id
 
 	if err = tx.Commit(); err != nil {
-		return FreonParticipant{}, err
+		return FreeonParticipant{}, err
 	}
 
 	return p, nil
 }
 
 // Add a keygen message to the queue
-func AddKeyGenMessage(db *sql.DB, groupUid string, myPartyID uint16, message []byte) (FreonKeygenMessage, error) {
+func AddKeyGenMessage(db *sql.DB, groupUid string, myPartyID uint16, message []byte) (FreeonKeygenMessage, error) {
 	group, err := GetGroupData(db, groupUid)
 	if err != nil {
-		return FreonKeygenMessage{}, err
+		return FreeonKeygenMessage{}, err
 	}
 	participant, err := GetParticipantID(db, groupUid, myPartyID)
 	if err != nil {
-		return FreonKeygenMessage{}, err
+		return FreeonKeygenMessage{}, err
 	}
-	msg := FreonKeygenMessage{
+	msg := FreeonKeygenMessage{
 		DbId:    int64(0),
 		GroupID: group.DbId,
 		Sender:  participant,
@@ -103,7 +103,7 @@ func AddKeyGenMessage(db *sql.DB, groupUid string, myPartyID uint16, message []b
 	}
 	id, err := InsertKeygenMessage(db, msg)
 	if err != nil {
-		return FreonKeygenMessage{}, err
+		return FreeonKeygenMessage{}, err
 	}
 	msg.DbId = id
 	return msg, nil

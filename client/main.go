@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/soatok/freon/client/internal"
+	"github.com/soatok/freeon/client/internal"
 )
 
 // Entrypoint for the command line program
@@ -22,7 +22,7 @@ func main() {
 	args := os.Args[1:]
 
 	// This is where commands are processed.
-	// Note that the first verb after `freon` is case insensitive.
+	// Note that the first verb after `freeon` is case insensitive.
 	command := strings.ToLower(args[0])
 	subArgs := args[1:]
 	switch command {
@@ -36,11 +36,11 @@ func main() {
 		subcommand := subArgs[0]
 		switch subcommand {
 		case "create":
-			FreonKeygenCreate(subArgs[1:])
+			FreeonKeygenCreate(subArgs[1:])
 		case "join":
-			FreonKeygenJoin(subArgs[1:])
+			FreeonKeygenJoin(subArgs[1:])
 		case "list":
-			FreonKeygenList(subArgs[1:])
+			FreeonKeygenList(subArgs[1:])
 		default:
 			fmt.Fprintf(os.Stderr, "Error: unknown keygen subcommand: %s\n\n", subcommand)
 			fmt.Fprintf(os.Stderr, "%s\n", keygenUsage)
@@ -57,13 +57,13 @@ func main() {
 		subcommand := subArgs[0]
 		switch subcommand {
 		case "create":
-			FreonSignCreate(subArgs[1:])
+			FreeonSignCreate(subArgs[1:])
 		case "list":
-			FreonSignList(subArgs[1:])
+			FreeonSignList(subArgs[1:])
 		case "join":
-			FreonSignJoin(subArgs[1:])
+			FreeonSignJoin(subArgs[1:])
 		case "get":
-			FreonSignGet(subArgs[1:])
+			FreeonSignGet(subArgs[1:])
 		default:
 			fmt.Fprintf(os.Stderr, "Error: unknown sign subcommand: %s\n\n", subcommand)
 			fmt.Fprintf(os.Stderr, "%s\n", signUsage)
@@ -71,7 +71,7 @@ func main() {
 		}
 
 	case "terminate":
-		FreonTerminate(subArgs)
+		FreeonTerminate(subArgs)
 
 	case "help":
 		if len(subArgs) == 0 {
@@ -123,8 +123,8 @@ func readInput(filename string) ([]byte, error) {
 	return io.ReadAll(os.Stdin)
 }
 
-// CMD: `freon keygen create ...`
-func FreonKeygenCreate(args []string) {
+// CMD: `freeon keygen create ...`
+func FreeonKeygenCreate(args []string) {
 	// Parse CLI arguments:
 	fs := flag.NewFlagSet("keygen create", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", keygenCreateUsage) }
@@ -182,8 +182,8 @@ func FreonKeygenCreate(args []string) {
 	internal.InitKeyGenCeremony(*host, uint16(*participants), uint16(*threshold))
 }
 
-// CMD: `freon keygen join ...`
-func FreonKeygenJoin(args []string) {
+// CMD: `freeon keygen join ...`
+func FreeonKeygenJoin(args []string) {
 	// Parse CLI arguments:
 	fs := flag.NewFlagSet("keygen join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", keygenJoinUsage) }
@@ -227,14 +227,14 @@ func FreonKeygenJoin(args []string) {
 	internal.JoinKeyGenCeremony(*host, *groupID, *recipient)
 }
 
-// CMD: `freon keygen list ...`
-func FreonKeygenList(args []string) {
+// CMD: `freeon keygen list ...`
+func FreeonKeygenList(args []string) {
 	// The actual logic is implemented here:
 	internal.ListKeyGen()
 }
 
-// CMD: `freon sign create ...`
-func FreonSignCreate(args []string) {
+// CMD: `freeon sign create ...`
+func FreeonSignCreate(args []string) {
 	// Parse CLI arguments:
 	fs := flag.NewFlagSet("sign create", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signCreateUsage) }
@@ -288,8 +288,8 @@ func FreonSignCreate(args []string) {
 	internal.InitSignCeremony(*host, *groupID, message, *openssh, *namespace)
 }
 
-// CMD: `freon sign join ...`
-func FreonSignJoin(args []string) {
+// CMD: `freeon sign join ...`
+func FreeonSignJoin(args []string) {
 	// Parse CLI arguments:
 	fs := flag.NewFlagSet("sign join", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signJoinUsage) }
@@ -328,7 +328,7 @@ func FreonSignJoin(args []string) {
 	internal.JoinSignCeremony(*ceremonyID, *host, *identity, message)
 }
 
-func FreonSignList(args []string) {
+func FreeonSignList(args []string) {
 	// Parse CLI arguments:
 	fs := flag.NewFlagSet("sign list", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signListUsage) }
@@ -361,8 +361,8 @@ func FreonSignList(args []string) {
 	internal.ListSign(*host, *groupID, *limit, *offset)
 }
 
-// CMD: `freon sign get ...`
-func FreonSignGet(args []string) {
+// CMD: `freeon sign get ...`
+func FreeonSignGet(args []string) {
 	// Parse CLI arguments:
 	fs := flag.NewFlagSet("sign get", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", signGetUsage) }
@@ -394,8 +394,8 @@ func FreonSignGet(args []string) {
 	internal.GetSignSignature(*ceremonyID, *host)
 }
 
-// CMD: `freon terminate ...`
-func FreonTerminate(args []string) {
+// CMD: `freeon terminate ...`
+func FreeonTerminate(args []string) {
 	// Parse CLI arguments:
 	fs := flag.NewFlagSet("terminate", flag.ExitOnError)
 	fs.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", terminateUsage) }

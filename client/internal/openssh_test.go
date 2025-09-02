@@ -6,7 +6,7 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	"github.com/soatok/freon/client/internal"
+	"github.com/soatok/freeon/client/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +30,7 @@ func TestOpenSSHEncode(t *testing.T) {
 	var sig2 []byte
 	h2 := sha256.Sum256([]byte("Signature Format"))
 	sig2 = append(sig2, h2[:]...)
-	h2 = sha256.Sum256([]byte("Freon - OpenSSH"))
+	h2 = sha256.Sum256([]byte("Freeon - OpenSSH"))
 	sig2 = append(sig2, h2[:]...)
 
 	encoded2 := internal.OpenSSHEncode(pk2, sig2, namespace)

@@ -20,7 +20,7 @@ func getConfigFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".freon-coordinator.json"), nil
+	return filepath.Join(homeDir, ".freeon-coordinator.json"), nil
 }
 
 // Default user config

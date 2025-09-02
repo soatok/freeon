@@ -81,10 +81,10 @@ func GetGroupRowId(db DBTX, groupUid string) (int, error) {
 }
 
 // Get the row ID for a given group
-func GetGroupData(db DBTX, groupUid string) (FreonGroup, error) {
+func GetGroupData(db DBTX, groupUid string) (FreeonGroup, error) {
 	stmt, err := db.Prepare("SELECT id, threshold, participants, publicKey FROM keygroups WHERE uid = ?")
 	if err != nil {
-		return FreonGroup{}, err
+		return FreeonGroup{}, err
 	}
 	defer stmt.Close()
 
@@ -94,9 +94,9 @@ func GetGroupData(db DBTX, groupUid string) (FreonGroup, error) {
 	var publicKey *string
 	err = stmt.QueryRow(groupUid).Scan(&id, &threshold, &participants, &publicKey)
 	if err != nil {
-		return FreonGroup{}, err
+		return FreeonGroup{}, err
 	}
-	return FreonGroup{
+	return FreeonGroup{
 		DbId:         id,
 		Uid:          groupUid,
 		Participants: participants,
@@ -104,10 +104,10 @@ func GetGroupData(db DBTX, groupUid string) (FreonGroup, error) {
 		PublicKey:    publicKey,
 	}, nil
 }
-func GetGroupByID(db *sql.DB, groupID int64) (FreonGroup, error) {
+func GetGroupByID(db *sql.DB, groupID int64) (FreeonGroup, error) {
 	stmt, err := db.Prepare("SELECT id, uid, threshold, participants, publicKey FROM keygroups WHERE id = ?")
 	if err != nil {
-		return FreonGroup{}, err
+		return FreeonGroup{}, err
 	}
 	defer stmt.Close()
 
@@ -118,9 +118,9 @@ func GetGroupByID(db *sql.DB, groupID int64) (FreonGroup, error) {
 	var publicKey *string
 	err = stmt.QueryRow(groupID).Scan(&id, &uid, &threshold, &participants, &publicKey)
 	if err != nil {
-		return FreonGroup{}, err
+		return FreeonGroup{}, err
 	}
-	return FreonGroup{
+	return FreeonGroup{
 		DbId:         id,
 		Uid:          uid,
 		Participants: participants,
@@ -130,7 +130,7 @@ func GetGroupByID(db *sql.DB, groupID int64) (FreonGroup, error) {
 }
 
 // Get all of the participants for a group
-func GetGroupParticipants(db DBTX, groupUid string) ([]FreonParticipant, error) {
+func GetGroupParticipants(db DBTX, groupUid string) ([]FreeonParticipant, error) {
 	stmt, err := db.Prepare(`
 		SELECT
 			p.id,
@@ -151,7 +151,7 @@ func GetGroupParticipants(db DBTX, groupUid string) ([]FreonParticipant, error) 
 	}
 	defer rows.Close()
 
-	var participants []FreonParticipant
+	var participants []FreeonParticipant
 	for rows.Next() {
 		var dbId int64
 		var groupId int64
@@ -160,7 +160,7 @@ func GetGroupParticipants(db DBTX, groupUid string) ([]FreonParticipant, error) 
 		if err := rows.Scan(&dbId, &groupId, &uid, &partyid); err != nil {
 			return nil, err
 		}
-		p := FreonParticipant{
+		p := FreeonParticipant{
 			DbId:    dbId,
 			GroupID: groupId,
 			Uid:     uid,
@@ -191,13 +191,13 @@ func GetParticipantID(db *sql.DB, groupUid string, myPartyID uint16) (int64, err
 	return id, nil
 }
 
-func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
+func GetCeremonyData(db *sql.DB, ceremonyID string) (FreeonCeremonies, error) {
 	stmt, err := db.Prepare(`SELECT
 		id, groupid, active, hash, signature, openssh, opensshnamespace
 		FROM ceremonies
 		WHERE uid = ?`)
 	if err != nil {
-		return FreonCeremonies{}, err
+		return FreeonCeremonies{}, err
 	}
 	defer stmt.Close()
 
@@ -210,9 +210,9 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	var opensshnamespace *string
 	err = stmt.QueryRow(ceremonyID).Scan(&id, &groupid, &active, &hash, &signature, &openssh, &opensshnamespace)
 	if err != nil {
-		return FreonCeremonies{}, err
+		return FreeonCeremonies{}, err
 	}
-	return FreonCeremonies{
+	return FreeonCeremonies{
 		DbId:             id,
 		GroupID:          groupid,
 		Uid:              ceremonyID,
@@ -224,7 +224,7 @@ func GetCeremonyData(db *sql.DB, ceremonyID string) (FreonCeremonies, error) {
 	}, nil
 }
 
-func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]FreonCeremonySummary, error) {
+func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]FreeonCeremonySummary, error) {
 	stmt, err := db.Prepare(`SELECT
 		c.uid, c.hash, c.signature, c.openssh, c.opensshnamespace, c.active
 		FROM ceremonies c
@@ -242,7 +242,7 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 		return nil, err
 	}
 	defer rows.Close()
-	var results []FreonCeremonySummary
+	var results []FreeonCeremonySummary
 	for rows.Next() {
 		var ceremonyID string
 		var hash string
@@ -259,7 +259,7 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 		} else {
 			ns = *opensshnamespace
 		}
-		row := FreonCeremonySummary{
+		row := FreeonCeremonySummary{
 			Uid:              ceremonyID,
 			Active:           active,
 			Hash:             hash,
@@ -272,7 +272,7 @@ func GetRecentCeremonies(db *sql.DB, groupID string, limit, offset int64) ([]Fre
 	return results, nil
 }
 
-func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
+func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreeonPlayers, error) {
 	stmt, err := db.Prepare(`
 		SELECT
 			x.id,
@@ -293,7 +293,7 @@ func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 	}
 	defer rows.Close()
 
-	var players []FreonPlayers
+	var players []FreeonPlayers
 	for rows.Next() {
 		var dbId int64
 		var ceremonyId int64
@@ -302,7 +302,7 @@ func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 		if err := rows.Scan(&dbId, &ceremonyId, &participantId, &partyId); err != nil {
 			return nil, err
 		}
-		p := FreonPlayers{
+		p := FreeonPlayers{
 			DbId:          dbId,
 			CeremonyID:    ceremonyId,
 			ParticipantID: participantId,
@@ -313,7 +313,7 @@ func GetCeremonyPlayers(db *sql.DB, ceremonyID string) ([]FreonPlayers, error) {
 	return players, nil
 }
 
-func GetKeygenMessagesSince(db *sql.DB, groupUid string, lastSeen int64) ([]FreonKeygenMessage, error) {
+func GetKeygenMessagesSince(db *sql.DB, groupUid string, lastSeen int64) ([]FreeonKeygenMessage, error) {
 	stmt, err := db.Prepare(`
 		SELECT
 			msg.id,
@@ -335,7 +335,7 @@ func GetKeygenMessagesSince(db *sql.DB, groupUid string, lastSeen int64) ([]Freo
 	}
 	defer rows.Close()
 
-	var messages []FreonKeygenMessage
+	var messages []FreeonKeygenMessage
 	for rows.Next() {
 		var id int64
 		var group int64
@@ -348,7 +348,7 @@ func GetKeygenMessagesSince(db *sql.DB, groupUid string, lastSeen int64) ([]Freo
 		if err != nil {
 			return nil, err
 		}
-		msg := FreonKeygenMessage{
+		msg := FreeonKeygenMessage{
 			DbId:    id,
 			GroupID: group,
 			Sender:  sender,
@@ -359,7 +359,7 @@ func GetKeygenMessagesSince(db *sql.DB, groupUid string, lastSeen int64) ([]Freo
 	return messages, nil
 }
 
-func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]FreonSignMessage, error) {
+func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]FreeonSignMessage, error) {
 	stmt, err := db.Prepare(`
 		SELECT
 			msg.id,
@@ -381,7 +381,7 @@ func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]Fre
 	}
 	defer rows.Close()
 
-	var messages []FreonSignMessage
+	var messages []FreeonSignMessage
 	for rows.Next() {
 		var id int64
 		var ceremony int64
@@ -394,7 +394,7 @@ func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]Fre
 		if err != nil {
 			return nil, err
 		}
-		msg := FreonSignMessage{
+		msg := FreeonSignMessage{
 			DbId:       id,
 			CeremonyID: ceremony,
 			Sender:     sender,
@@ -405,7 +405,7 @@ func GetSignMessagesSince(db *sql.DB, ceremonyUid string, lastSeen int64) ([]Fre
 	return messages, nil
 }
 
-func InsertGroup(db *sql.DB, g FreonGroup) (int64, error) {
+func InsertGroup(db *sql.DB, g FreeonGroup) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO keygroups (uid, participants, threshold) VALUES (?, ?, ?)`)
 	if err != nil {
 		return 0, err
@@ -421,7 +421,7 @@ func InsertGroup(db *sql.DB, g FreonGroup) (int64, error) {
 	return id, nil
 }
 
-func InsertCeremony(db *sql.DB, c FreonCeremonies) (int64, error) {
+func InsertCeremony(db *sql.DB, c FreeonCeremonies) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO ceremonies (groupid, uid, active, hash) VALUES (?, ?, ?, ?)`)
 	if err != nil {
 		return 0, err
@@ -437,7 +437,7 @@ func InsertCeremony(db *sql.DB, c FreonCeremonies) (int64, error) {
 	return id, nil
 }
 
-func InsertParticipant(db DBTX, p FreonParticipant) (int64, error) {
+func InsertParticipant(db DBTX, p FreeonParticipant) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO participants (groupid, uid, partyid) VALUES (?, ?, ?)`)
 	if err != nil {
 		return 0, err
@@ -453,7 +453,7 @@ func InsertParticipant(db DBTX, p FreonParticipant) (int64, error) {
 	return id, nil
 }
 
-func InsertPlayer(db *sql.DB, p FreonPlayers) (int64, error) {
+func InsertPlayer(db *sql.DB, p FreeonPlayers) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO players (ceremonyid, participantid) VALUES (?, ?)`)
 	if err != nil {
 		return 0, err
@@ -469,7 +469,7 @@ func InsertPlayer(db *sql.DB, p FreonPlayers) (int64, error) {
 	return id, nil
 }
 
-func InsertKeygenMessage(db *sql.DB, m FreonKeygenMessage) (int64, error) {
+func InsertKeygenMessage(db *sql.DB, m FreeonKeygenMessage) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO keygenmsg (groupid, sender, message) VALUES (?, ?, ?)`)
 	if err != nil {
 		return 0, err
@@ -486,7 +486,7 @@ func InsertKeygenMessage(db *sql.DB, m FreonKeygenMessage) (int64, error) {
 	return id, nil
 }
 
-func InsertSignMessage(db *sql.DB, m FreonSignMessage) (int64, error) {
+func InsertSignMessage(db *sql.DB, m FreeonSignMessage) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO signmsg (ceremonyid, sender, message) VALUES (?, ?, ?)`)
 	if err != nil {
 		return 0, err
@@ -503,9 +503,9 @@ func InsertSignMessage(db *sql.DB, m FreonSignMessage) (int64, error) {
 	return id, nil
 }
 
-func FinalizeGroup(db *sql.DB, g FreonGroup) error {
+func FinalizeGroup(db *sql.DB, g FreeonGroup) error {
 	if g.PublicKey == nil {
-		return errors.New("public key is not stored in FreonGroup struct")
+		return errors.New("public key is not stored in FreeonGroup struct")
 	}
 	stmt, err := db.Prepare(`UPDATE keygroups SET publicKey = ? WHERE id = ?`)
 	if err != nil {
@@ -518,7 +518,7 @@ func FinalizeGroup(db *sql.DB, g FreonGroup) error {
 	return nil
 }
 
-func FinalizeSignature(db *sql.DB, c FreonCeremonies, sig string) error {
+func FinalizeSignature(db *sql.DB, c FreeonCeremonies, sig string) error {
 	if !c.Active {
 		return errors.New("group is already finalized")
 	}

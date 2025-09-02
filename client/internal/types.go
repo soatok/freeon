@@ -11,7 +11,7 @@ type Shares struct {
 }
 
 // This may expand in future versions
-type FreonConfig struct {
+type FreeonConfig struct {
 	Shares []Shares `json:"shares"`
 }
 
@@ -141,7 +141,7 @@ type VapidResponse struct {
 	Status string `json:"status"`
 }
 
-type FreonCeremonySummary struct {
+type FreeonCeremonySummary struct {
 	Uid              string
 	Active           bool
 	Hash             string
@@ -155,5 +155,5 @@ type ListSignRequest struct {
 	Offset  int64  `json:"offset"`
 }
 type ListSignResponse struct {
-	Ceremonies []FreonCeremonySummary
+	Ceremonies []FreeonCeremonySummary
 }

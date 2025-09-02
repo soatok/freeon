@@ -6,7 +6,7 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/soatok/freon/coordinator/internal"
+	"github.com/soatok/freeon/coordinator/internal"
 	"github.com/stretchr/testify/assert"
 )
 

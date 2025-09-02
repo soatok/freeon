@@ -18,26 +18,26 @@ func getConfigFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(homeDir, ".freon.json"), nil
+	return filepath.Join(homeDir, ".freeon.json"), nil
 }
 
 // Default user config
-func NewUserConfig() (FreonConfig, error) {
-	config := FreonConfig{
+func NewUserConfig() (FreeonConfig, error) {
+	config := FreeonConfig{
 		Shares: []Shares{},
 	}
 	err := config.Save()
 	if err != nil {
-		return FreonConfig{}, err
+		return FreeonConfig{}, err
 	}
 	return config, nil
 }
 
 // Load the user config from a saved file
-func LoadUserConfig() (FreonConfig, error) {
+func LoadUserConfig() (FreeonConfig, error) {
 	configPath, err := getConfigFile()
 	if err != nil {
-		return FreonConfig{}, err
+		return FreeonConfig{}, err
 	}
 
 	file, err := os.Open(configPath)
@@ -45,19 +45,19 @@ func LoadUserConfig() (FreonConfig, error) {
 		if os.IsNotExist(err) {
 			return NewUserConfig()
 		}
-		return FreonConfig{}, err
+		return FreeonConfig{}, err
 	}
 	defer file.Close()
 
-	var conf FreonConfig
+	var conf FreeonConfig
 	if err := json.NewDecoder(file).Decode(&conf); err != nil {
-		return FreonConfig{}, err
+		return FreeonConfig{}, err
 	}
 	return conf, err
 }
 
-// This API felt more natural for me to implement than `func SaveUserConfig(cfg FreonConfig) error`
-func (cfg FreonConfig) Save() error {
+// This API felt more natural for me to implement than `func SaveUserConfig(cfg FreeonConfig) error`
+func (cfg FreeonConfig) Save() error {
 	configPath, err := getConfigFile()
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (cfg FreonConfig) Save() error {
 	return encoder.Encode(cfg)
 }
 
-func (cfg FreonConfig) AddShare(host, groupID, publicKey, share string, otherShares map[string]string, myPartyID uint16) error {
+func (cfg FreeonConfig) AddShare(host, groupID, publicKey, share string, otherShares map[string]string, myPartyID uint16) error {
 	s := Shares{
 		Host:           host,
 		GroupID:        groupID,

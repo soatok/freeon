@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/soatok/freon/client/internal"
+	"github.com/soatok/freeon/client/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +46,7 @@ func TestDuct(t *testing.T) {
 		case "/sign/list":
 			var req internal.ListSignRequest
 			json.NewDecoder(r.Body).Decode(&req)
-			resp := internal.ListSignResponse{Ceremonies: []internal.FreonCeremonySummary{{Uid: "test-ceremony"}}}
+			resp := internal.ListSignResponse{Ceremonies: []internal.FreeonCeremonySummary{{Uid: "test-ceremony"}}}
 			json.NewEncoder(w).Encode(resp)
 		case "/keygen/send":
 			var req internal.KeyGenMessageRequest

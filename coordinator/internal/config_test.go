@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/soatok/freon/coordinator/internal"
+	"github.com/soatok/freeon/coordinator/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +27,7 @@ func TestServerConfig(t *testing.T) {
 	}
 
 	// Check if the file was created
-	configPath := filepath.Join(tempDir, ".freon-coordinator.json")
+	configPath := filepath.Join(tempDir, ".freeon-coordinator.json")
 	_, err = os.Stat(configPath)
 	assert.NoError(t, err)
 

@@ -4,13 +4,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/soatok/freon/client/internal"
+	"github.com/soatok/freeon/client/internal"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPersistence(t *testing.T) {
 	// Create a temporary directory for the config file
-	tmpdir, err := os.MkdirTemp("", "freon-test-")
+	tmpdir, err := os.MkdirTemp("", "freeon-test-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 

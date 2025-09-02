@@ -6,7 +6,7 @@ import (
 
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/soatok/freon/coordinator/internal"
+	"github.com/soatok/freeon/coordinator/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +47,7 @@ func TestParticipantFunctions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Insert a group
-	group := internal.FreonGroup{
+	group := internal.FreeonGroup{
 		Uid:          "test_group",
 		Participants: 3,
 		Threshold:    2,
@@ -56,7 +56,7 @@ func TestParticipantFunctions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Insert a participant
-	p := internal.FreonParticipant{
+	p := internal.FreeonParticipant{
 		GroupID: gid,
 		Uid:     "test_participant",
 		PartyID: 1,
@@ -84,15 +84,15 @@ func TestCeremonyAndMessageFunctions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Insert a group and participant
-	group := internal.FreonGroup{Uid: "g", Participants: 2, Threshold: 2}
+	group := internal.FreeonGroup{Uid: "g", Participants: 2, Threshold: 2}
 	gid, err := internal.InsertGroup(db, group)
 	assert.NoError(t, err)
-	p := internal.FreonParticipant{GroupID: gid, Uid: "p", PartyID: 1}
+	p := internal.FreeonParticipant{GroupID: gid, Uid: "p", PartyID: 1}
 	pid, err := internal.InsertParticipant(db, p)
 	assert.NoError(t, err)
 
 	// Insert a ceremony
-	c := internal.FreonCeremonies{
+	c := internal.FreeonCeremonies{
 		GroupID: gid,
 		Uid:     "c",
 		Active:  true,
@@ -108,7 +108,7 @@ func TestCeremonyAndMessageFunctions(t *testing.T) {
 	assert.Equal(t, c.Uid, cData.Uid)
 
 	// Insert a player
-	player := internal.FreonPlayers{
+	player := internal.FreeonPlayers{
 		CeremonyID:    cid,
 		ParticipantID: pid,
 	}
@@ -136,7 +136,7 @@ func TestCeremonyAndMessageFunctions(t *testing.T) {
 	assert.Equal(t, "sig", *cData.Signature)
 
 	// InsertKeygenMessage
-	km := internal.FreonKeygenMessage{
+	km := internal.FreeonKeygenMessage{
 		GroupID: gid,
 		Sender:  pid,
 		Message: []byte("keygen message"),
@@ -152,7 +152,7 @@ func TestCeremonyAndMessageFunctions(t *testing.T) {
 	assert.Equal(t, km.Message, kms[0].Message)
 
 	// InsertSignMessage
-	sm := internal.FreonSignMessage{
+	sm := internal.FreeonSignMessage{
 		CeremonyID: cid,
 		Sender:     pid,
 		Message:    []byte("sign message"),
@@ -174,7 +174,7 @@ func TestGroupFunctions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Insert a group
-	group := internal.FreonGroup{
+	group := internal.FreeonGroup{
 		Uid:          "test_group",
 		Participants: 3,
 		Threshold:    2,

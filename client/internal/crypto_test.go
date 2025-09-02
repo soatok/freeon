@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"filippo.io/age"
-	"github.com/soatok/freon/client/internal"
+	"github.com/soatok/freeon/client/internal"
 )
 
 func TestEncryptDecryptShare(t *testing.T) {

@@ -1,25 +1,24 @@
-# FREON
+# FREEON
 
-> FOSS Resists Executive Overreaching Nations
+> FOSS Resists Extralegal Executive Overreaching Nations
 
-[![Build Status](https://github.com/soatok/freon/actions/workflows/ci.yml/badge.svg)](https://github.com/soatok/freon/actions/workflows/ci.yml)
+[![Build Status](https://github.com/soatok/freeon/actions/workflows/ci.yml/badge.svg)](https://github.com/soatok/freeon/actions/workflows/ci.yml)
 
-FREON implements FROST ([RFC 9591](https://www.rfc-editor.org/rfc/rfc9591.html)) to allow geographically distributed teams produce digital signatures.
+FREEON implements FROST ([RFC 9591](https://www.rfc-editor.org/rfc/rfc9591.html)) to allow geographically distributed teams produce digital signatures.
 
 Each share of the signing key is encrypted locally using [age](https://github.com/FiloSottile/age).
 
 > [!WARNING]
 > This software is a minimum viable product (MVP) and is only in the **alpha** stage of development. It has not been audited. Do not use this in production yet!
 
+> This project is not affiliated with [the Chemours Company](https://en.wikipedia.org/wiki/Freon).
+
 ## Installation
 
-### Freon Clients
-
-> [!WARNING]
-> This command currently does not work. See [below](#temporary-workaround-for-replace-directive-error).
+### Freeon Clients
 
 ```terminal
-go install github.com/soatok/freon/client@latest
+go install github.com/soatok/freeon/client@latest
 ```
 
 #### For Developers
@@ -27,12 +26,12 @@ go install github.com/soatok/freon/client@latest
 You can also clone the repository to install the client locally:
 
 ```terminal
-git clone https://github.com/soatok/freon.git
-cd freon/client
+git clone https://github.com/soatok/freeon.git
+cd freeon/client
 go install
 ```
 
-### Freon Coordinators
+### Freeon Coordinators
 
 > [!WARNING]
 > The coordinator is expected to run on a private network, such as [Tailscale](https://tailscale.com),
@@ -42,8 +41,8 @@ go install
 > Internet, but this was cut from the alpha release due to time constraints.
 
 ```terminal
-git clone https://github.com/soatok/freon.git
-cd freon
+git clone https://github.com/soatok/freeon.git
+cd freeon
 go build -o coordinator ./coordinator
 ./coordinator
 ```
@@ -54,7 +53,7 @@ The order of operations is as followed:
 
 1. Perform the **Distributed Key Generation** ceremony once, for each Ed25519 keypair.
    1. One client tell the coordinator to initiate a new DKG. The number of parties and threshold are required at this step.
-   2. The coordinator sets up a session that other clients can connect to, and gives the DKG Group ID to the client. This is to be shared with other users. The Group ID is not sensitive; it only serves to allow multiple keys be managed by one Freon coordinator.
+   2. The coordinator sets up a session that other clients can connect to, and gives the DKG Group ID to the client. This is to be shared with other users. The Group ID is not sensitive; it only serves to allow multiple keys be managed by one Freeon coordinator.
    3. Once every participating user enrolls in the DKG ceremony, the final public key is calculated and shared with each participant.
    4. Each client encrypts their Shamir Share, along with their Party ID and the group identifier, locally.
 2. For each message to be signed:
@@ -71,20 +70,20 @@ To initiate a new DKG group, one of the clients with access to the coordinator w
 the number of participants and threshold needed to perform a signature operation, respectively):
 
 ```terminal
-freon keygen create -h hostname:port -n 7 -t 3
+freeon keygen create -h hostname:port -n 7 -t 3
 ```
 
 Upon success, a Group ID will be returned. This is to be shared with the other participants, who will pass it as an extra argument:
 
 ```terminal
-freon keygen join -h hostname:port -g [group-id-goes-here]
+freeon keygen join -h hostname:port -g [group-id-goes-here]
 ```
 
 This will maintain a connection with the coordinator until all `n` participants have connected. Afterwards, a copy of the public key will be returned to each client.
 
 #### Optional Arguments
 
-If you provide a public key (`-r [RECIPIENT]`) as an optional argument, the Freon client will use [age](https://age-encryption.org) to encrypt the share locally. This public key can be an age public key or an OpenSSH public key.
+If you provide a public key (`-r [RECIPIENT]`) as an optional argument, the Freeon client will use [age](https://age-encryption.org) to encrypt the share locally. This public key can be an age public key or an OpenSSH public key.
 
 ### Signature Generation
 
@@ -98,8 +97,8 @@ To initiate a key ceremony, the following information is needed:
 The message can be passed as a file name or via `STDIN`, like so:
 
 ```terminal
-freon sign create -g [group-id-goes-here] file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign create -g [group-id-goes-here]
+freeon sign create -g [group-id-goes-here] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freeon sign create -g [group-id-goes-here]
 ```
 
 This will initialize a signature in progress and return a Ceremony ID.
@@ -114,8 +113,8 @@ By default, the final signature will be returned as a 128-character hex-encoded 
 You can pass an optional `--openssh` flag to return an OpenSSH-compatible signature.
 
 ```terminal
-freon sign create --openssh -g [group-id-goes-here] file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign create --openssh -g [group-id-goes-here]
+freeon sign create --openssh -g [group-id-goes-here] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freeon sign create --openssh -g [group-id-goes-here]
 ```
 
 ##### Terminating Incomplete Ceremonies
@@ -123,7 +122,7 @@ echo -n "MESSAGE TO BE SIGNED" | freon sign create --openssh -g [group-id-goes-h
 You can run this command to flush any incomplete ceremonies.
 
 ```terminal
-freon terminate [ceremony-id-goes-here]
+freeon terminate [ceremony-id-goes-here]
 ```
 
 > [!WARNING]
@@ -134,12 +133,12 @@ freon terminate [ceremony-id-goes-here]
 Each client will need to run this command to participate in the ceremony.
 
 ```terminal
-freon sign join -c [ceremony-id] file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign join -c [ceremony-id]
+freeon sign join -c [ceremony-id] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freeon sign join -c [ceremony-id]
 
 # Identical:
-freon sign join --ceremony [ceremony-id] file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign join --ceremony [ceremony-id]
+freeon sign join --ceremony [ceremony-id] file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freeon sign join --ceremony [ceremony-id]
 ```
 
 ##### Optional Arguments
@@ -147,10 +146,10 @@ echo -n "MESSAGE TO BE SIGNED" | freon sign join --ceremony [ceremony-id]
 You can furthermore pass the `-i` or `--identity` flag to specify the file path for your age secret keys.
 
 ```terminal
-freon sign join -c [ceremony-id] -i /path/to/age.keys file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign join -i /path/to/age.keys -c [ceremony-id]
+freeon sign join -c [ceremony-id] -i /path/to/age.keys file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freeon sign join -i /path/to/age.keys -c [ceremony-id]
 
 # Identical
-freon sign join --ceremony [ceremony-id] --identity /path/to/age.keys file-with-message.txt
-echo -n "MESSAGE TO BE SIGNED" | freon sign join --identity /path/to/age.keys --ceremony [ceremony-id]
+freeon sign join --ceremony [ceremony-id] --identity /path/to/age.keys file-with-message.txt
+echo -n "MESSAGE TO BE SIGNED" | freeon sign join --identity /path/to/age.keys --ceremony [ceremony-id]
 ```

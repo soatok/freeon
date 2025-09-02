@@ -21,7 +21,7 @@ import (
 	"filippo.io/age"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/soatok/freon/coordinator/internal"
+	"github.com/soatok/freeon/coordinator/internal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +31,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	tempDir, err := os.MkdirTemp("", "freon-bins-")
+	tempDir, err := os.MkdirTemp("", "freeon-bins-")
 	if err != nil {
 		fmt.Printf("could not create temp dir: %v", err)
 		os.Exit(1)
@@ -89,7 +89,7 @@ func startCoordinator(t *testing.T) *coordinator {
 	t.Helper()
 
 	// Create a temporary directory for the coordinator's database
-	dir, err := os.MkdirTemp("", "freon-coordinator-test")
+	dir, err := os.MkdirTemp("", "freeon-coordinator-test")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(dir) })
 
@@ -108,7 +108,7 @@ func startCoordinator(t *testing.T) *coordinator {
 	hostname := fmt.Sprintf("localhost:%d", port)
 
 	// Create a temporary config file for the coordinator
-	configFile, err := os.CreateTemp("", "freon-coordinator-config-*.json")
+	configFile, err := os.CreateTemp("", "freeon-coordinator-config-*.json")
 	require.NoError(t, err)
 	defer os.Remove(configFile.Name())
 
@@ -150,7 +150,7 @@ func (c *coordinator) stop(t *testing.T) {
 func newClient(t *testing.T) *client {
 	t.Helper()
 
-	homeDir, err := os.MkdirTemp("", "freon-client-test")
+	homeDir, err := os.MkdirTemp("", "freeon-client-test")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(homeDir) })
 
@@ -169,7 +169,7 @@ func newClient(t *testing.T) *client {
 	}
 }
 
-// run runs a freon client command
+// run runs a freeon client command
 func (c *client) run(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 
