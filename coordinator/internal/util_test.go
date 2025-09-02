@@ -3,7 +3,7 @@ package internal_test
 import (
 	"testing"
 
-	"github.com/soatok/freon/coordinator/internal"
+	"github.com/soatok/freeon/coordinator/internal"
 	"github.com/stretchr/testify/assert"
 )
 

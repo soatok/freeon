@@ -102,25 +102,25 @@ func PollSignCeremony(db *sql.DB, ceremonyID string, myPartyID uint16) (PollSign
 	}, nil
 }
 
-func AddSignMessage(db *sql.DB, ceremonyUid string, myPartyID uint16, message []byte) (FreonSignMessage, error) {
+func AddSignMessage(db *sql.DB, ceremonyUid string, myPartyID uint16, message []byte) (FreeonSignMessage, error) {
 	ceremony, err := GetCeremonyData(db, ceremonyUid)
 	if err != nil {
-		return FreonSignMessage{}, err
+		return FreeonSignMessage{}, err
 	}
 	if !ceremony.Active {
-		return FreonSignMessage{}, errors.New("ceremony is not active or does not exist")
+		return FreeonSignMessage{}, errors.New("ceremony is not active or does not exist")
 	}
 
 	group, err := GetGroupByID(db, ceremony.GroupID)
 	if err != nil {
-		return FreonSignMessage{}, err
+		return FreeonSignMessage{}, err
 	}
 
 	participant, err := GetParticipantID(db, group.Uid, myPartyID)
 	if err != nil {
-		return FreonSignMessage{}, err
+		return FreeonSignMessage{}, err
 	}
-	msg := FreonSignMessage{
+	msg := FreeonSignMessage{
 		DbId:       int64(0),
 		CeremonyID: ceremony.DbId,
 		Sender:     participant,
@@ -128,7 +128,7 @@ func AddSignMessage(db *sql.DB, ceremonyUid string, myPartyID uint16, message []
 	}
 	id, err := InsertSignMessage(db, msg)
 	if err != nil {
-		return FreonSignMessage{}, err
+		return FreeonSignMessage{}, err
 	}
 	msg.DbId = id
 	return msg, nil

@@ -13,7 +13,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
-	"github.com/soatok/freon/coordinator/internal"
+	"github.com/soatok/freeon/coordinator/internal"
 )
 
 var sessionManager *scs.SessionManager
@@ -82,7 +82,7 @@ func sendError(w http.ResponseWriter, e error) {
 
 // Handler for index page
 func indexPage(w http.ResponseWriter, r *http.Request) {
-	response := ResponseMainPage{Message: "Freon Coordinator v0.0.0"}
+	response := ResponseMainPage{Message: "Freeon Coordinator v0.0.0"}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }

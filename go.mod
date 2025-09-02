@@ -1,3 +1,3 @@
-module github.com/soatok/freon
+module github.com/soatok/freeon
 
 go 1.25

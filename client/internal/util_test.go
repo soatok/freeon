@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/soatok/freon/client/internal"
+	"github.com/soatok/freeon/client/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +29,7 @@ func TestHashMessageForSanity(t *testing.T) {
 }
 
 func TestAmIElected(t *testing.T) {
-	hash := sha512.Sum384([]byte("freon testing"))
+	hash := sha512.Sum384([]byte("freeon testing"))
 	tests := []struct {
 		Elected bool
 		MyID    uint16
@@ -102,7 +102,7 @@ func TestUniqueID(t *testing.T) {
 }
 
 func TestSelectIndex(t *testing.T) {
-	hash := sha512.Sum384([]byte("freon testing"))
+	hash := sha512.Sum384([]byte("freeon testing"))
 	index := internal.SelectIndex(hash[:], 8)
 	assert.Equal(t, uint64(4), index)
 }

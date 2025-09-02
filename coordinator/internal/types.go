@@ -1,6 +1,6 @@
 package internal
 
-type FreonGroup struct {
+type FreeonGroup struct {
 	DbId         int64
 	Uid          string
 	Participants uint16
@@ -8,7 +8,7 @@ type FreonGroup struct {
 	PublicKey    *string
 }
 
-type FreonParticipant struct {
+type FreeonParticipant struct {
 	DbId    int64
 	GroupID int64
 	Uid     string
@@ -16,14 +16,14 @@ type FreonParticipant struct {
 	State   []byte
 }
 
-type FreonKeygenMessage struct {
+type FreeonKeygenMessage struct {
 	DbId    int64
 	GroupID int64
 	Sender  int64
 	Message []byte
 }
 
-type FreonCeremonies struct {
+type FreeonCeremonies struct {
 	DbId             int64
 	GroupID          int64
 	Uid              string
@@ -35,7 +35,7 @@ type FreonCeremonies struct {
 }
 
 // For public lists of signing ceremonies
-type FreonCeremonySummary struct {
+type FreeonCeremonySummary struct {
 	Uid              string
 	Active           bool
 	Hash             string
@@ -44,14 +44,14 @@ type FreonCeremonySummary struct {
 	OpenSSHNamespace string
 }
 
-type FreonPlayers struct {
+type FreeonPlayers struct {
 	DbId          int64
 	CeremonyID    int64
 	ParticipantID int64
 	PartyID       uint16
 }
 
-type FreonSignMessage struct {
+type FreeonSignMessage struct {
 	DbId       int64
 	CeremonyID int64
 	Sender     int64

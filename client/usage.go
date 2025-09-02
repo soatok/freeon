@@ -2,10 +2,10 @@ package main
 
 // This file contains the basic help text for each subcommand
 
-const usage = `FREON - FOSS Resists Executive Overreaching Nations
+const usage = `FREEON - FOSS Resists Extralegal Executive Overreaching Nations
 
 USAGE:
-    freon [OPTIONS] <COMMAND>
+    freeon [OPTIONS] <COMMAND>
 
 DESCRIPTION:
     Distributed Ed25519 signature generation using FROST (RFC 9591).
@@ -23,20 +23,20 @@ COMMANDS:
     terminate    Terminate incomplete ceremonies
     help         Print this message or the help of the given subcommand(s)
 
-Use 'freon <COMMAND> --help' for more information on a specific command.
+Use 'freeon <COMMAND> --help' for more information on a specific command.
 
 EXAMPLES:
-    freon keygen create -h coordinator:8080 -n 5 -t 3
-    freon sign create -g abc123 message.txt
-    freon sign join -c ceremony456
+    freeon keygen create -h coordinator:8080 -n 5 -t 3
+    freeon sign create -g abc123 message.txt
+    freeon sign join -c ceremony456
 
 `
 
 const keygenUsage = `
-FREON KEYGEN - Distributed Key Generation
+freeon KEYGEN - Distributed Key Generation
 
 USAGE:
-    freon keygen <SUBCOMMAND>
+    freeon keygen <SUBCOMMAND>
 
 SUBCOMMANDS:
     create    Initialize a new DKG ceremony
@@ -45,10 +45,10 @@ SUBCOMMANDS:
     help      Print this message or the help of the given subcommand(s)
 `
 
-const keygenCreateUsage = `FREON KEYGEN CREATE - Initialize DKG ceremony
+const keygenCreateUsage = `freeon KEYGEN CREATE - Initialize DKG ceremony
 
 USAGE:
-    freon keygen create [OPTIONS] -h <HOST> -n <PARTICIPANTS> -t <THRESHOLD>
+    freeon keygen create [OPTIONS] -h <HOST> -n <PARTICIPANTS> -t <THRESHOLD>
 
 DESCRIPTION:
     Creates a new distributed key generation ceremony. Returns a Group ID
@@ -62,16 +62,16 @@ OPTIONS:
         --help                     Print help information
 
 EXAMPLES:
-    freon keygen create -h coord.example.com:8080 -n 7 -t 3
-    freon keygen create -h 192.168.1.100:8080 -n 5 -t 3 -r age1abc...
+    freeon keygen create -h coord.example.com:8080 -n 7 -t 3
+    freeon keygen create -h 192.168.1.100:8080 -n 5 -t 3 -r age1abc...
 
 `
 
 const keygenJoinUsage = `
-FREON KEYGEN JOIN - Join DKG ceremony
+freeon KEYGEN JOIN - Join DKG ceremony
 
 USAGE:
-    freon keygen join [OPTIONS] -h <HOST> -g <GROUP_ID>
+    freeon keygen join [OPTIONS] -h <HOST> -g <GROUP_ID>
 
 DESCRIPTION:
     Join an existing DKG ceremony using the Group ID from the creator.
@@ -84,15 +84,15 @@ OPTIONS:
         --help                Print help information
 
 EXAMPLES:
-    freon keygen join -h coord.example.com:8080 -g grp_abc123def456
-    freon keygen join -h coord.example.com:8080 -g grp_xyz789 -r ~/.ssh/id_ed25519.pub
+    freeon keygen join -h coord.example.com:8080 -g grp_abc123def456
+    freeon keygen join -h coord.example.com:8080 -g grp_xyz789 -r ~/.ssh/id_ed25519.pub
 
 `
 
-const signUsage = `FREON SIGN - Signature Generation
+const signUsage = `freeon SIGN - Signature Generation
 
 USAGE:
-    freon sign <SUBCOMMAND>
+    freeon sign <SUBCOMMAND>
 
 SUBCOMMANDS:
     create    Initialize a new signature ceremony
@@ -102,10 +102,10 @@ SUBCOMMANDS:
 
 `
 
-const signCreateUsage = `FREON SIGN CREATE - Initialize signature ceremony
+const signCreateUsage = `freeon SIGN CREATE - Initialize signature ceremony
 
 USAGE:
-    freon sign create [OPTIONS] -g <GROUP_ID> [MESSAGE]
+    freeon sign create [OPTIONS] -g <GROUP_ID> [MESSAGE]
 
 DESCRIPTION:
     Creates a new signature ceremony for the specified group and message.
@@ -123,16 +123,16 @@ OPTIONS:
     --namespace <NAMESPACE>   Specify a namespace for OpenSSH (default: "file")
 
 EXAMPLES:
-    freon sign create -g grp_abc123 message.txt
-    echo "Hello World" | freon sign create -g grp_abc123 -
-    freon sign create -g grp_abc123  --openssh --namespace git release.tar.gz
+    freeon sign create -g grp_abc123 message.txt
+    echo "Hello World" | freeon sign create -g grp_abc123 -
+    freeon sign create -g grp_abc123  --openssh --namespace git release.tar.gz
 
 `
 
-const signListUsage = `FREON SIGN LIST - List recent signing ceremonies
+const signListUsage = `freeon SIGN LIST - List recent signing ceremonies
 
 USAGE:
-    freon sign list [OPTIONS] -g <GROUP_ID>
+    freeon sign list [OPTIONS] -g <GROUP_ID>
 
 DESCRIPTION:
     List recent signing ceremonies for the specified group. Results are
@@ -146,17 +146,17 @@ OPTIONS:
         --help                Print help information
 
 EXAMPLES:
-    freon sign list -g grp_abc123
-    freon sign list -g grp_abc123 --limit 10
-    freon sign list -g grp_abc123 --limit 20 --offset 40
-    freon sign list -g grp_abc123 -h coord.example.com:8080 --limit 5
+    freeon sign list -g grp_abc123
+    freeon sign list -g grp_abc123 --limit 10
+    freeon sign list -g grp_abc123 --limit 20 --offset 40
+    freeon sign list -g grp_abc123 -h coord.example.com:8080 --limit 5
 
 `
 
-const signJoinUsage = `FREON SIGN JOIN - Join signature ceremony  
+const signJoinUsage = `freeon SIGN JOIN - Join signature ceremony  
 
 USAGE:
-    freon sign join [OPTIONS] -c <CEREMONY_ID> [MESSAGE]
+    freeon sign join [OPTIONS] -c <CEREMONY_ID> [MESSAGE]
 
 DESCRIPTION:
     Join an existing signature ceremony. The message must match what was
@@ -172,16 +172,16 @@ OPTIONS:
         --help                      Print help information
 
 EXAMPLES:
-    freon sign join -c cer_def456 message.txt
-    echo "Hello World" | freon sign join -c cer_def456 -
-    freon sign join -c cer_def456 -i ~/.age/keys.txt message.txt
+    freeon sign join -c cer_def456 message.txt
+    echo "Hello World" | freeon sign join -c cer_def456 -
+    freeon sign join -c cer_def456 -i ~/.age/keys.txt message.txt
 
 `
 
-const signGetUsage = `FREON SIGN GET - Get signature from coordinator
+const signGetUsage = `freeon SIGN GET - Get signature from coordinator
 
 USAGE:
-    freon sign get [OPTIONS] -c <CEREMONY_ID>
+    freeon sign get [OPTIONS] -c <CEREMONY_ID>
 
 DESCRIPTION:
     Query the coordinator for the final signature for a concluded
@@ -193,15 +193,15 @@ OPTIONS:
         --help                      Print help information
 
 EXAMPLES:
-    freon sign get -c cer_def456
-    freon sign get -h coord.example.com:8080 -c cer_def456 message.txt
+    freeon sign get -c cer_def456
+    freeon sign get -h coord.example.com:8080 -c cer_def456 message.txt
 
 `
 
-const terminateUsage = `FREON TERMINATE - Terminate ceremonies
+const terminateUsage = `freeon TERMINATE - Terminate ceremonies
 
 USAGE:
-    freon terminate <CEREMONY_ID>
+    freeon terminate <CEREMONY_ID>
 
 DESCRIPTION:
     Terminate an incomplete signature ceremony. Does not require
@@ -214,6 +214,6 @@ OPTIONS:
         --help    Print help information
 
 EXAMPLES:
-    freon terminate cer_def456
+    freeon terminate cer_def456
 
 `
