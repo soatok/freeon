@@ -121,7 +121,7 @@ func startCoordinator(t *testing.T) *coordinator {
 
 	// Start the coordinator
 	cmd := exec.Command(coordinatorBinPath)
-	cmd.Env = append(os.Environ(), "FREON_COORDINATOR_CONFIG="+configFile.Name())
+	cmd.Env = append(os.Environ(), "FREEON_COORDINATOR_CONFIG="+configFile.Name())
 	var coordOutput bytes.Buffer
 	cmd.Stdout = &coordOutput
 	cmd.Stderr = &coordOutput
@@ -174,7 +174,7 @@ func (c *client) run(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 
 	cmd := exec.Command(clientBinPath, args...)
-	cmd.Env = append(os.Environ(), "FREON_HOME="+c.homeDir)
+	cmd.Env = append(os.Environ(), "FREEON_HOME="+c.homeDir)
 
 	output, err := cmd.CombinedOutput()
 	return string(output), err

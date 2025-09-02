@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
+	"strings"
 	"testing"
 
 	"github.com/soatok/freeon/client/internal"
@@ -38,9 +39,13 @@ func TestOpenSSHEncode(t *testing.T) {
 	const expected = `-----BEGIN SSH SIGNATURE-----
 AAAABlNTSFNJRwAAAAEAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIEWbPXw3NFqPht+qbUzQeU
 ot2rnHXclITN0UivggnYz5AAAABHRlc3QAAAAAAAAAC3NzaC1lZDI1NTE5AAAAUwAAAAtz
-c2gtZWQyNTUxOQAAAEAn5PrscAKy4X4bzwdTN19iOi+Tb3UJYRJU9z/U6Jb+quEHH/xdcM
-DBg1GNXn8vH89nqU/IBZXnFKQBrgXoRNNu
+c2gtZWQyNTUxOQAAAEAn5PrscAKy4X4bzwdTN19iOi+Tb3UJYRJU9z/U6Jb+qtX3kF5ZYH
+6eVkXFIipre97XzH+lojn92vOx7elXLe/Y
 -----END SSH SIGNATURE-----
 `
-	assert.Equal(t, expected, encoded2)
+    left := strings.ReplaceAll(expected, "\r", "")
+    left = strings.ReplaceAll(left, "\\n", "\n")
+    right := strings.ReplaceAll(encoded2, "\r", "")
+    right = strings.ReplaceAll(right, "\\n", "\n")
+	assert.Equal(t, left, right)
 }

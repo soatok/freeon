@@ -7,7 +7,6 @@ require github.com/alexedwards/scs/v2 v2.9.0
 require (
 	filippo.io/age v1.2.1
 	github.com/ncruces/go-sqlite3 v0.28.0
-	github.com/soatok/freeon/coordinator v0.0.0-20250831122941-3dcf071c280b
 	github.com/stretchr/testify v1.10.0
 )
 

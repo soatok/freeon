@@ -8,7 +8,6 @@ require (
 	github.com/bytemare/ecc v0.8.2
 	github.com/bytemare/frost v0.0.0-20241019112700-8c6db5b04145
 	github.com/bytemare/secret-sharing v0.7.0
-	github.com/soatok/freeon/client v0.0.0-20250831122941-3dcf071c280b
 	github.com/stretchr/testify v1.10.0
 )
 

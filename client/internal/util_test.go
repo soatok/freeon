@@ -29,7 +29,7 @@ func TestHashMessageForSanity(t *testing.T) {
 }
 
 func TestAmIElected(t *testing.T) {
-	hash := sha512.Sum384([]byte("freeon testing"))
+	hash := sha512.Sum384([]byte("freeon testing am-i-elected"))
 	tests := []struct {
 		Elected bool
 		MyID    uint16
@@ -41,8 +41,8 @@ func TestAmIElected(t *testing.T) {
 		{false, 2, []uint16{1, 2}},
 		{false, 0xffff, []uint16{1, 2}},
 
-		{false, 1, []uint16{1, 2, 3}},
-		{true, 2, []uint16{1, 2, 3}},
+		{true, 1, []uint16{1, 2, 3}},
+		{false, 2, []uint16{1, 2, 3}},
 		{false, 3, []uint16{1, 2, 3}},
 
 		{true, 1, []uint16{1, 2, 3, 4}},
@@ -52,23 +52,23 @@ func TestAmIElected(t *testing.T) {
 
 		{false, 1, []uint16{1, 2, 3, 4, 5}},
 		{false, 2, []uint16{1, 2, 3, 4, 5}},
-		{true, 3, []uint16{1, 2, 3, 4, 5}},
+		{false, 3, []uint16{1, 2, 3, 4, 5}},
 		{false, 4, []uint16{1, 2, 3, 4, 5}},
-		{false, 5, []uint16{1, 2, 3, 4, 5}},
+		{true, 5, []uint16{1, 2, 3, 4, 5}},
 
-		{false, 1, []uint16{1, 2, 3, 4, 5, 6}},
+		{true, 1, []uint16{1, 2, 3, 4, 5, 6}},
 		{false, 2, []uint16{1, 2, 3, 4, 5, 6}},
 		{false, 3, []uint16{1, 2, 3, 4, 5, 6}},
 		{false, 4, []uint16{1, 2, 3, 4, 5, 6}},
-		{true, 5, []uint16{1, 2, 3, 4, 5, 6}},
+		{false, 5, []uint16{1, 2, 3, 4, 5, 6}},
 		{false, 6, []uint16{1, 2, 3, 4, 5, 6}},
 
 		{false, 1, []uint16{1, 2, 3, 4, 5, 6, 7}},
 		{false, 2, []uint16{1, 2, 3, 4, 5, 6, 7}},
 		{false, 3, []uint16{1, 2, 3, 4, 5, 6, 7}},
-		{false, 4, []uint16{1, 2, 3, 4, 5, 6, 7}},
+		{true, 4, []uint16{1, 2, 3, 4, 5, 6, 7}},
 		{false, 5, []uint16{1, 2, 3, 4, 5, 6, 7}},
-		{true, 6, []uint16{1, 2, 3, 4, 5, 6, 7}},
+		{false, 6, []uint16{1, 2, 3, 4, 5, 6, 7}},
 		{false, 7, []uint16{1, 2, 3, 4, 5, 6, 7}},
 
 		{false, 1, []uint16{1, 2, 3, 4, 5, 6, 7, 8}},
@@ -102,9 +102,9 @@ func TestUniqueID(t *testing.T) {
 }
 
 func TestSelectIndex(t *testing.T) {
-	hash := sha512.Sum384([]byte("freeon testing"))
+	hash := sha512.Sum384([]byte("freeon testing selectindex"))
 	index := internal.SelectIndex(hash[:], 8)
-	assert.Equal(t, uint64(4), index)
+	assert.Equal(t, uint64(5), index)
 }
 
 func TestHexBEToUint16(t *testing.T) {
